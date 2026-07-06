@@ -16,6 +16,15 @@ Extra: een automatische privacycheck markeert risicovolle formuleringen met een 
 - Geen account of login nodig
 - Huisstijlkleuren zijn aanpasbaar via de CSS-variabelen bovenin `src/styles.css`
 
+## Logo's vervangen
+
+In `public/` staan tijdelijke woordmerken voor HumanCapitalCare en ArboNed. Vervang ze door de officiële logobestanden door de bestanden te overschrijven met **dezelfde bestandsnamen**:
+
+- `public/logo-humancapitalcare.svg`
+- `public/logo-arboned.svg`
+
+SVG heeft de voorkeur (blijft scherp); een PNG kan ook, hernoem die dan naar exact dezelfde naam inclusief `.svg`-extensie te vervangen door `.png` én pas de twee verwijzingen in `src/App.jsx` aan. De logo's verschijnen als subtiel watermerk op de achtergrond en in de voettekst.
+
 ## Lokaal draaien
 
 ```bash
