@@ -1,19 +1,54 @@
-# 💬 Chatbot template
+# Terugkoppeltool spreekuur
 
-A simple Streamlit app that shows how to build a chatbot using OpenAI's GPT-3.5.
+Webapp voor bedrijfsartsen, arboverpleegkundigen en praktijkondersteuners bedrijfsartsen (POB's) van HumanCapitalCare. De tool stelt na een spreekuur gerichte vragen en genereert daaruit een terugkoppeling aan de leidinggevende die:
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://chatbot-template.streamlit.app/)
+1. **Juridisch correct** is — geen diagnoses, medische termen of privé-informatie (AVG, beleidsregels AP "De zieke werknemer", NVAB-richtlijnen)
+2. **Positief geframed** is — start met wat de werknemer wél kan
+3. **Direct bruikbaar** is — begrijpelijke taal en concreet handelingsperspectief
 
-### How to run it on your own machine
+Extra: een automatische privacycheck markeert risicovolle formuleringen met een functioneel alternatief dat met één klik kan worden overgenomen.
 
-1. Install the requirements
+## Techniek
 
-   ```
-   $ pip install -r requirements.txt
-   ```
+- React + Vite, single page, mobile-first
+- Anthropic API (model `claude-sonnet-4-6`) via een Netlify Function als proxy — de API-key staat uitsluitend server-side
+- Geen database of opslag: alle gegevens blijven in het browsergeheugen en verdwijnen bij verversen
+- Geen account of login nodig
+- Huisstijlkleuren zijn aanpasbaar via de CSS-variabelen bovenin `src/styles.css`
 
-2. Run the app
+## Lokaal draaien
 
-   ```
-   $ streamlit run streamlit_app.py
-   ```
+```bash
+npm install
+export ANTHROPIC_API_KEY=sk-ant-...   # nooit committen
+npx netlify dev                        # draait frontend + functions samen op http://localhost:8888
+```
+
+`npm run dev` (alleen Vite) werkt ook, maar dan zijn de AI-functies niet beschikbaar tenzij je daarnaast `netlify functions:serve` draait.
+
+## Deployen naar Netlify
+
+1. Push deze repository naar GitHub en maak op [netlify.com](https://app.netlify.com) een nieuwe site aan via **Add new site → Import an existing project**.
+2. Netlify leest de instellingen uit `netlify.toml` (build command `npm run build`, publish directory `dist`, functions in `netlify/functions`). Je hoeft niets aan te passen.
+3. Zet de environment variable onder **Site configuration → Environment variables**:
+
+   | Naam | Waarde |
+   |---|---|
+   | `ANTHROPIC_API_KEY` | Je Anthropic API-key (aan te maken op [platform.claude.com](https://platform.claude.com)) |
+
+4. Deploy. De frontend praat via `/.netlify/functions/anthropic` met de proxy; de key is nooit zichtbaar in de browser.
+
+## Structuur
+
+```
+netlify/functions/anthropic.mjs   # API-proxy: antwoordcheck, generatie, privacycheck
+src/App.jsx                       # flow: context → vragen → resultaat
+src/QuestionStep.jsx              # één vraag per scherm, met voortgangsindicator
+src/ResultStep.jsx                # resultaat, privacycheck, toon-varianten, kopieerknop
+src/lib/questions.js              # vragenset en categorieën
+src/styles.css                    # huisstijl via CSS-variabelen
+```
+
+## Disclaimer
+
+De professional blijft eindverantwoordelijk voor de inhoud. Controleer de tekst altijd zelf voordat je deze deelt.
