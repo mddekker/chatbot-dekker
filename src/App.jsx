@@ -123,6 +123,11 @@ export default function App() {
 
   return (
     <div className="app">
+      <div className="bg-watermark" aria-hidden="true">
+        <img src="/logo-humancapitalcare.svg" alt="" />
+        <img src="/logo-arboned.svg" alt="" />
+      </div>
+
       <header className="app-header">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true" />
@@ -250,7 +255,12 @@ export default function App() {
       </main>
 
       <footer className="app-footer">
-        Controleer de tekst altijd zelf voordat je deze deelt.
+        <div className="footer-logos">
+          <img src="/logo-humancapitalcare.svg" alt="HumanCapitalCare" />
+          <span className="footer-divider" aria-hidden="true" />
+          <img src="/logo-arboned.svg" alt="ArboNed" />
+        </div>
+        <p>Controleer de tekst altijd zelf voordat je deze deelt.</p>
       </footer>
     </div>
   )

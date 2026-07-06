@@ -1,9 +1,9 @@
 /* Huisstijl HumanCapitalCare — eenvoudig aanpasbaar via deze variabelen. */
 :root {
-  --color-primary: #0d3b66;        /* donkerblauw */
-  --color-primary-dark: #092c4d;
-  --color-accent: #2e8b6f;         /* groen */
-  --color-accent-soft: #e3f2ec;
+  --color-primary: #1b3e8e;        /* donkerblauw (HumanCapitalCare/ArboNed navy) */
+  --color-primary-dark: #142f6b;
+  --color-accent: #1c9ca6;         /* teal (HumanCapitalCare) */
+  --color-accent-soft: #e2f4f5;
   --color-bg: #f6f8fa;
   --color-card: #ffffff;
   --color-text: #1c2b3a;
@@ -30,10 +30,39 @@ body {
 }
 
 .app {
+  position: relative;
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+}
+
+/* Subtiel logowatermerk op de achtergrond; inhoud blijft er altijd boven. */
+.bg-watermark {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 1.5rem;
+  padding: 0 1.5rem 4.5rem 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-watermark img {
+  width: min(52vw, 340px);
+  opacity: 0.05;
+  filter: grayscale(35%);
+}
+
+.app-header,
+.app-main,
+.app-footer {
+  position: relative;
+  z-index: 1;
 }
 
 .app-header {
@@ -55,7 +84,7 @@ body {
   height: 36px;
   flex-shrink: 0;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--color-accent), #6fbfa4);
+  background: linear-gradient(135deg, var(--color-accent), #33b1e6);
 }
 
 .brand h1 {
@@ -222,7 +251,7 @@ textarea {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #257a60;
+  background: #17858e;
 }
 
 .btn-ghost {
@@ -425,6 +454,35 @@ textarea {
   text-align: center;
   font-size: 0.82rem;
   color: var(--color-muted);
+}
+
+.app-footer p {
+  margin: 0.35rem 0 0;
+}
+
+.footer-logos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.footer-logos img {
+  height: 26px;
+  width: auto;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+
+.footer-logos img:hover {
+  opacity: 1;
+}
+
+.footer-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--color-border);
 }
 
 @media (min-width: 640px) {
