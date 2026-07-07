@@ -148,11 +148,13 @@ Afspraken en vervolg`
       : 'De werknemer heeft géén toestemming gegeven voor het delen van aanvullende informatie: houd alles strikt functioneel.',
   )
 
+  // Aan het einde van de opdracht, dwingend geformuleerd: daar weegt het het
+  // zwaarst voor het model. De harde privacyregels blijven altijd voorgaan.
   const aandachtspuntenInstruction = answers.aandachtspunten
-    ? `\n\nAandachtspunten van de professional voor deze brief — verwerk deze zo goed mogelijk, maar de harde regels (geen diagnoses, medische termen of privé-informatie) gaan altijd voor:\n${answers.aandachtspunten}`
+    ? `\n\nBELANGRIJKE AANWIJZINGEN VAN DE PROFESSIONAL VOOR DEZE BRIEF\nDe professional heeft de volgende aanwijzingen meegegeven. Volg ze nauwkeurig op: neem punten die genoemd moeten worden daadwerkelijk op in de brief, laat weg wat weggelaten moet worden, en pas toon of accent aan zoals gevraagd. Alleen als een aanwijzing strijdig is met de harde regels (geen diagnoses, medische termen of privé-informatie) gaan die regels voor.\n\nAanwijzingen: ${answers.aandachtspunten}`
     : ''
 
-  const userMessage = `${roleInstruction}\n\n${salutationInstruction}\n\n${structure}\n\n${toneInstruction}${aandachtspuntenInstruction}\n\nGegevens uit het spreekuur (alleen ingevulde onderdelen; wat ontbreekt laat je weg uit de tekst, zonder placeholders of open zinnen):\n\n${lines.join('\n\n')}`
+  const userMessage = `${roleInstruction}\n\n${salutationInstruction}\n\n${structure}\n\n${toneInstruction}\n\nGegevens uit het spreekuur (alleen ingevulde onderdelen; wat ontbreekt laat je weg uit de tekst, zonder placeholders of open zinnen):\n\n${lines.join('\n\n')}${aandachtspuntenInstruction}`
 
   const response = await getClient().messages.create({
     model: MODEL,
