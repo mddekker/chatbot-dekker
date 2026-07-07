@@ -30,7 +30,7 @@ export const WERKFACTOR_CATEGORIEEN = [
 ]
 
 // Maximaal aantal vragen in de flow, inclusief vervolgvragen.
-export const MAX_QUESTIONS = 12
+export const MAX_QUESTIONS = 13
 
 export const QUESTIONS = [
   {
@@ -140,6 +140,14 @@ export const QUESTIONS = [
     hint: 'Standaard nee: dan blijft alles strikt functioneel.',
     type: 'consent',
     required: true,
+    adaptiveCheck: false,
+  },
+  {
+    id: 'aandachtspunten',
+    label: 'Zijn er nog aandachtspunten voor deze terugkoppelingsbrief?',
+    hint: 'Alles wat de tool moet weten of meenemen: iets dat zeker benoemd moet worden, iets dat juist niet in de brief hoort, een gevoeligheid in de relatie met de leidinggevende, of een gewenst accent. Laat leeg als niet van toepassing.',
+    type: 'textarea',
+    required: false,
     adaptiveCheck: false,
   },
 ]

@@ -140,7 +140,11 @@ Afspraken en vervolg`
       : 'De werknemer heeft géén toestemming gegeven voor het delen van aanvullende informatie: houd alles strikt functioneel.',
   )
 
-  const userMessage = `${roleInstruction}\n\n${salutationInstruction}\n\n${structure}\n\n${toneInstruction}\n\nGegevens uit het spreekuur (alleen ingevulde onderdelen; wat ontbreekt laat je weg uit de tekst, zonder placeholders of open zinnen):\n\n${lines.join('\n\n')}`
+  const aandachtspuntenInstruction = answers.aandachtspunten
+    ? `\n\nAandachtspunten van de professional voor deze brief — verwerk deze zo goed mogelijk, maar de harde regels (geen diagnoses, medische termen of privé-informatie) gaan altijd voor:\n${answers.aandachtspunten}`
+    : ''
+
+  const userMessage = `${roleInstruction}\n\n${salutationInstruction}\n\n${structure}\n\n${toneInstruction}${aandachtspuntenInstruction}\n\nGegevens uit het spreekuur (alleen ingevulde onderdelen; wat ontbreekt laat je weg uit de tekst, zonder placeholders of open zinnen):\n\n${lines.join('\n\n')}`
 
   const response = await getClient().messages.create({
     model: MODEL,
