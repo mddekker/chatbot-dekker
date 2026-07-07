@@ -44,6 +44,7 @@ npx netlify dev                        # draait frontend + functions samen op ht
    | Naam | Waarde |
    |---|---|
    | `ANTHROPIC_API_KEY` | Je Anthropic API-key (aan te maken op [platform.claude.com](https://platform.claude.com)) |
+   | `SITE_PASSWORD` | Optioneel: gedeeld toegangswachtwoord. Gezet = de app vraagt een wachtwoord vóór gebruik (server-side gecontroleerd, ook voor de AI-aanroepen). Niet gezet = de app is open. |
 
 4. Deploy. De frontend praat via `/.netlify/functions/anthropic` met de proxy; de key is nooit zichtbaar in de browser.
 

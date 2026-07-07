@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ROLES, CONSULT_TYPES, QUESTIONS, MAX_QUESTIONS } from './lib/questions.js'
-import { checkAnswer } from './lib/api.js'
+import { checkAnswer, verifyPassword, storedPassword } from './lib/api.js'
+import PasswordGate from './PasswordGate.jsx'
 import QuestionStep from './QuestionStep.jsx'
 import ResultStep from './ResultStep.jsx'
 
@@ -18,6 +19,8 @@ function formatDateNL(iso) {
 }
 
 export default function App() {
+  // 'checking' tot de server heeft gemeld of er een wachtwoord nodig is.
+  const [access, setAccess] = useState('checking') // checking | locked | open
   const [phase, setPhase] = useState('context') // context | questions | result
   const [role, setRole] = useState('')
   const [consultType, setConsultType] = useState('')
@@ -31,6 +34,13 @@ export default function App() {
   const [checking, setChecking] = useState(false)
 
   const followUpBudget = MAX_QUESTIONS - QUESTIONS.length
+
+  useEffect(() => {
+    // Zonder ingesteld SITE_PASSWORD geeft de server altijd ok: dan geen slot.
+    verifyPassword(storedPassword())
+      .then((ok) => setAccess(ok ? 'open' : 'locked'))
+      .catch(() => setAccess('locked'))
+  }, [])
 
   const generationInput = useMemo(() => {
     if (phase !== 'result') return null
@@ -158,7 +168,16 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        {phase === 'context' && (
+        {access === 'checking' && (
+          <section className="card card-center">
+            <div className="spinner" aria-hidden="true" />
+            <p className="hint">Even laden…</p>
+          </section>
+        )}
+
+        {access === 'locked' && <PasswordGate onUnlocked={() => setAccess('open')} />}
+
+        {access === 'open' && phase === 'context' && (
           <section className="card">
             <h2>Rol en context</h2>
             <p className="intro">
@@ -247,7 +266,7 @@ export default function App() {
           </section>
         )}
 
-        {phase === 'questions' && (
+        {access === 'open' && phase === 'questions' && (
           <QuestionStep
             key={queue[index].id}
             question={queue[index]}
@@ -260,7 +279,7 @@ export default function App() {
           />
         )}
 
-        {phase === 'result' && generationInput && (
+        {access === 'open' && phase === 'result' && generationInput && (
           <ResultStep
             input={generationInput}
             onRestart={() => {
