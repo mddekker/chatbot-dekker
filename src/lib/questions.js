@@ -20,8 +20,17 @@ export const BEPERKING_CATEGORIEEN = [
   'Samenwerken en sociale interactie',
 ]
 
-// Maximaal aantal vragen in de flow, inclusief adaptieve vervolgvragen.
-export const MAX_QUESTIONS = 10
+export const WERKFACTOR_CATEGORIEEN = [
+  'Werkdruk en tempo',
+  'Werkinhoud en taken',
+  'Samenwerking en werksfeer',
+  'Spanning met leidinggevende of collega',
+  'Fysieke arbeidsomstandigheden',
+  'Werktijden en roosters',
+]
+
+// Maximaal aantal vragen in de flow, inclusief vervolgvragen.
+export const MAX_QUESTIONS = 12
 
 export const QUESTIONS = [
   {
@@ -54,6 +63,29 @@ export const QUESTIONS = [
     chips: BEPERKING_CATEGORIEEN,
     required: true,
     adaptiveCheck: true,
+  },
+  {
+    id: 'werkgerelateerd',
+    label: 'Is het verzuim (mede) werkgerelateerd?',
+    hint: 'Relevant voor de leidinggevende: bij werkgerelateerde factoren liggen oplossingen (deels) in het werk zelf. Benoem alleen functionele factoren, geen medische oorzaken.',
+    type: 'choice',
+    options: ['Ja', 'Gedeeltelijk', 'Nee', 'Nog onduidelijk'],
+    required: true,
+    adaptiveCheck: false,
+    conditionalFollowUp: {
+      triggerValues: ['Ja', 'Gedeeltelijk'],
+      question: {
+        id: 'werkfactoren',
+        parentId: 'werkgerelateerd',
+        label: 'Welke werkgerelateerde factoren spelen een rol?',
+        hint: 'Klik factoren aan en licht kort toe. Houd het functioneel en werkgericht, bijvoorbeeld: "de combinatie van hoge werkdruk en onduidelijke taakverdeling".',
+        type: 'chips-text',
+        chips: WERKFACTOR_CATEGORIEEN,
+        required: false,
+        adaptiveCheck: false,
+        isFollowUp: true,
+      },
+    },
   },
   {
     id: 'verwachting',

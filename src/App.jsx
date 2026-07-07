@@ -71,9 +71,26 @@ export default function App() {
 
   async function submitAnswer(question, value) {
     const nextAnswers = { ...answers, [question.id]: value }
-    setAnswers(nextAnswers)
 
     let nextQueue = queue
+
+    // Vaste vervolgvraag (bijv. werkgerelateerde factoren) tonen of verwijderen
+    // op basis van het gekozen antwoord.
+    if (question.conditionalFollowUp) {
+      const { triggerValues, question: followUp } = question.conditionalFollowUp
+      const inQueue = nextQueue.some((q) => q.id === followUp.id)
+      const triggered = triggerValues.includes(value)
+      if (triggered && !inQueue && nextQueue.length < MAX_QUESTIONS) {
+        nextQueue = [...nextQueue.slice(0, index + 1), followUp, ...nextQueue.slice(index + 1)]
+        setQueue(nextQueue)
+      } else if (!triggered && inQueue) {
+        nextQueue = nextQueue.filter((q) => q.id !== followUp.id)
+        delete nextAnswers[followUp.id]
+        setQueue(nextQueue)
+      }
+    }
+
+    setAnswers(nextAnswers)
     const freeText = adaptiveText(question, value)
     const followUpsUsed = queue.length - QUESTIONS.length
     if (
