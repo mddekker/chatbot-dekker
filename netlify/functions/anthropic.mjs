@@ -10,6 +10,14 @@ function getClient() {
 
 const MODEL = 'claude-sonnet-4-6'
 
+// Optionele toegangsbeveiliging: zet SITE_PASSWORD als environment variable in
+// Netlify om de app achter een gedeeld wachtwoord te zetten. Niet gezet = open.
+function passwordOk(body) {
+  const sitePassword = process.env.SITE_PASSWORD || ''
+  if (!sitePassword) return true
+  return typeof body.password === 'string' && body.password === sitePassword
+}
+
 // Systeemprompt voor de generatie-call — letterlijk conform specificatie.
 const GENERATION_SYSTEM_PROMPT =
   'Je schrijft een terugkoppeling van een spreekuur bij de arbodienst aan de leidinggevende van de werkgever. Harde regels: noem nooit een diagnose, ziektebeeld, behandeling, medicatie of medische term. Beschrijf uitsluitend belastbaarheid, functionele beperkingen en benutbare mogelijkheden. Start met wat de werknemer wél kan. Schrijf in begrijpelijk Nederlands voor iemand zonder medische achtergrond. Wees concreet: uren, taken, termijnen. Geef de leidinggevende een duidelijk handelingsperspectief. Toon: professioneel, warm, actief. Lengte: 150-250 woorden. Lever platte tekst zonder markdown-opmaak, zonder placeholders en zonder aanvullende toelichting: alleen de brieftekst zelf, direct te kopiëren in de terugkoppelingsbrief.'
@@ -175,18 +183,31 @@ export default async (req) => {
   if (req.method !== 'POST') {
     return Response.json({ error: 'Method not allowed' }, { status: 405 })
   }
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return Response.json(
-      { error: 'ANTHROPIC_API_KEY ontbreekt in de server-omgeving.' },
-      { status: 500 },
-    )
-  }
 
   let body
   try {
     body = await req.json()
   } catch {
     return Response.json({ error: 'Ongeldige JSON.' }, { status: 400 })
+  }
+
+  // Wachtwoordcontrole vóór alles: verify_password meldt alleen of het klopt,
+  // alle andere taken worden geweigerd zonder juist wachtwoord.
+  if (body.task === 'verify_password') {
+    return Response.json({ ok: passwordOk(body) })
+  }
+  if (!passwordOk(body)) {
+    return Response.json(
+      { error: 'Onjuist of ontbrekend wachtwoord. Ververs de pagina en log opnieuw in.' },
+      { status: 401 },
+    )
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return Response.json(
+      { error: 'ANTHROPIC_API_KEY ontbreekt in de server-omgeving.' },
+      { status: 500 },
+    )
   }
 
   try {
