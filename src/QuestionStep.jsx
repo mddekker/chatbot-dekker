@@ -13,7 +13,10 @@ export default function QuestionStep({
     typeof initialValue === 'string' ? initialValue : initialValue?.text || '',
   )
   const [chips, setChips] = useState(initialValue?.chips || [])
-  const [keuze, setKeuze] = useState(initialValue?.keuze || '')
+  const [keuze, setKeuze] = useState(
+    initialValue?.keuze ||
+      (question.type === 'choice' && typeof initialValue === 'string' ? initialValue : ''),
+  )
   const [weken, setWeken] = useState(initialValue?.weken || '')
   const [consent, setConsent] = useState(
     typeof initialValue === 'string' && initialValue ? initialValue : 'nee',
@@ -31,6 +34,8 @@ export default function QuestionStep({
         return { chips, text }
       case 'expectation':
         return { keuze, weken }
+      case 'choice':
+        return keuze
       case 'consent':
         return consent
       default:
@@ -43,6 +48,7 @@ export default function QuestionStep({
       case 'chips-text':
         return chips.length === 0 && text.trim().length === 0
       case 'expectation':
+      case 'choice':
         return !keuze
       case 'consent':
         return !consent
@@ -57,6 +63,7 @@ export default function QuestionStep({
       case 'chips-text':
         return chips.length > 0 || text.trim().length > 0
       case 'expectation':
+      case 'choice':
         return Boolean(keuze)
       case 'consent':
         return Boolean(consent)
@@ -127,6 +134,21 @@ export default function QuestionStep({
             onChange={(e) => setWeken(e.target.value)}
           />
         </>
+      )}
+
+      {question.type === 'choice' && (
+        <div className="chip-group" role="radiogroup" aria-label={question.label}>
+          {question.options.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              className={`chip ${keuze === opt ? 'chip-active' : ''}`}
+              onClick={() => setKeuze(opt)}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
       )}
 
       {question.type === 'consent' && (
