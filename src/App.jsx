@@ -37,7 +37,8 @@ export default function App() {
     const vragen = []
     for (const q of queue) {
       const value = answers[q.id]
-      if (q.id === 'toestemming') continue
+      // Deze twee gaan als aparte velden mee, niet als vraag-antwoord in de brief.
+      if (q.id === 'toestemming' || q.id === 'aandachtspunten') continue
       const text = answerToText(q, value)
       if (!text) continue
       if (q.isFollowUp) {
@@ -57,6 +58,7 @@ export default function App() {
         functie: functie.trim(),
         naam: naam.trim(),
         toestemming: answers.toestemming || 'nee',
+        aandachtspunten: (answers.aandachtspunten || '').trim(),
         vragen: vragen.map(({ vraag, antwoord }) => ({ vraag, antwoord })),
       },
     }
