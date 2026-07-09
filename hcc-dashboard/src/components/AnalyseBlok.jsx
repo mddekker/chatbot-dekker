@@ -3,9 +3,12 @@ import { brutalFacts } from '../lib/brutalFacts.js'
 import { genereerAnalyse } from '../lib/analyseApi.js'
 import { haalAnalyseOp, bewaarAnalyse } from '../lib/store.js'
 import { maandLabel, entiteitLabel } from '../lib/entities.js'
+import { contextDocs } from '../lib/kpi.js'
+import Markdown from '../lib/markdown.jsx'
 
 export default function AnalyseBlok({ idx, ent, maand }) {
   const bevindingen = brutalFacts(idx, ent, maand)
+  const context = contextDocs(idx, maand)
   const [analyse, setAnalyse] = useState(null)
   const [bezig, setBezig] = useState(false)
   const [fout, setFout] = useState(null)
@@ -45,8 +48,18 @@ export default function AnalyseBlok({ idx, ent, maand }) {
 
       <div className="geen-print" style={{ marginTop: 14 }}>
         <button className="knop primair" onClick={genereer} disabled={bezig}>
-          {bezig ? 'Bezig met genereren…' : 'Genereer analyse'}
+          {bezig ? 'Bezig met genereren… (kan een minuut duren)' : 'Genereer analyse'}
         </button>
+        {context.length > 0 && (
+          <span className="context-hint">
+            {context.length} contextdocument{context.length === 1 ? '' : 'en'} gaat mee in de analyse
+          </span>
+        )}
+        {context.length === 0 && (
+          <span className="context-hint">
+            Tip: upload rapportages (Word/PowerPoint/Excel) bij Upload voor een scherpere analyse
+          </span>
+        )}
         {fout && <div className="fout-melding">{fout}</div>}
       </div>
 
@@ -56,7 +69,7 @@ export default function AnalyseBlok({ idx, ent, maand }) {
             AI-analyse van {maandLabel(analyse.maand || maand)} · gegenereerd op{' '}
             {new Date(analyse.created_at).toLocaleString('nl-NL')}
           </div>
-          {analyse.inhoud}
+          <Markdown tekst={analyse.inhoud} />
         </div>
       )}
     </div>

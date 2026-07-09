@@ -3,6 +3,7 @@ import { HCC } from '../lib/entities.js'
 import KpiTiles from './KpiTiles.jsx'
 import RegioTabel from './RegioTabel.jsx'
 import AnalyseBlok from './AnalyseBlok.jsx'
+import OverzichtStrip from './OverzichtStrip.jsx'
 import { ActBudFcChart, ProductiviteitChart, VerzuimChart, OmzetMixChart } from './Charts.jsx'
 
 export default function DashboardHCC({ idx, maand }) {
@@ -12,6 +13,7 @@ export default function DashboardHCC({ idx, maand }) {
 
   return (
     <>
+      <OverzichtStrip idx={idx} maand={maand} />
       <h2>KPI's — HCC totaal</h2>
       <KpiTiles tegels={tegels} />
 

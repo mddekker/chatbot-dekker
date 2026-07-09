@@ -1,9 +1,13 @@
 import { supabase, demoModus } from './supabase.js'
 import { ALLE_ENTITEITEN } from './entities.js'
-import { trendReeksen, kpiTegels } from './kpi.js'
+import { trendReeksen, kpiTegels, contextDocs } from './kpi.js'
 import { brutalFacts } from './brutalFacts.js'
 
-// Bouw een compacte payload: geselecteerde maand volledig + 6 maanden trend.
+// Totaalbudget voor contextteksten in de payload (tekens).
+const MAX_CONTEXT_TOTAAL = 60000
+
+// Bouw een compacte payload: geselecteerde maand volledig + 6 maanden trend
+// + eventuele contextdocumenten van die maand.
 export function bouwAnalysePayload(idx, maand) {
   const entiteiten = {}
   for (const ent of ALLE_ENTITEITEN) {
@@ -15,7 +19,28 @@ export function bouwAnalysePayload(idx, maand) {
       bevindingen: brutalFacts(idx, ent, maand).map((b) => b.tekst),
     }
   }
-  return { maand, entiteiten }
+
+  let budget = MAX_CONTEXT_TOTAAL
+  const context = []
+  for (const doc of contextDocs(idx, maand)) {
+    if (budget <= 0) break
+    const tekst = doc.tekst.slice(0, budget)
+    budget -= tekst.length
+    context.push({ bestandsnaam: doc.bestandsnaam, soort: doc.soort, entiteit: doc.entiteit, tekst })
+  }
+
+  return {
+    maand,
+    // Het model leest deze instructie mee met de data; zo krijgt de analyse
+    // een nette Markdown-structuur zonder dat de Edge Function hoeft te wijzigen.
+    outputInstructie:
+      'Structureer je antwoord in Markdown: begin met "## Conclusie", daarna per entiteit een kopje ' +
+      '"## <naam>" met maximaal drie kernpunten als opsomming (kerncijfers **vet**), sluit af met ' +
+      '"## Aanbevelingen" als genummerde lijst. Betrek de meegeleverde contextdocumenten expliciet ' +
+      'waar ze de cijfers verklaren of tegenspreken, met bronvermelding (bestandsnaam).',
+    entiteiten,
+    contextDocumenten: context,
+  }
 }
 
 export async function genereerAnalyse(idx, maand) {
