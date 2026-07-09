@@ -3,19 +3,32 @@ import { HCC, REGIOS } from './entities.js'
 // Bouw uit de platte snapshotlijst een index:
 // { wenv: { ENT: { '2026-06-01': {mtd,ytd} } },
 //   prod: { ENT: { '2026-06-01': {...} } },
-//   maanden: ['2026-01-01', ...] } (gesorteerd, unie van beide bronnen)
+//   context: { ENT: { '2026-06-01': { docs: [...] } } },
+//   maanden: ['2026-01-01', ...] } (gesorteerd, unie van de cijferbronnen)
 export function indexeerSnapshots(rijen) {
-  const idx = { wenv: {}, prod: {}, maanden: [] }
+  const idx = { wenv: {}, prod: {}, context: {}, maanden: [] }
   const maanden = new Set()
   for (const rij of rijen || []) {
     const maand = String(rij.maand).slice(0, 10)
-    maanden.add(maand)
-    const doel = rij.bron === 'wenv' ? idx.wenv : idx.prod
+    const doel = rij.bron === 'wenv' ? idx.wenv : rij.bron === 'productiviteit' ? idx.prod : idx.context
+    // Contextdocumenten sturen de maandkiezer niet; alleen cijfers tellen mee.
+    if (rij.bron !== 'context') maanden.add(maand)
     doel[rij.entiteit] = doel[rij.entiteit] || {}
     doel[rij.entiteit][maand] = rij.data
   }
   idx.maanden = [...maanden].sort()
   return idx
+}
+
+// Alle contextdocumenten van een maand, over alle entiteiten heen.
+export function contextDocs(idx, maand) {
+  const docs = []
+  for (const [ent, perMaand] of Object.entries(idx.context)) {
+    for (const doc of perMaand[maand]?.docs || []) {
+      docs.push({ ...doc, entiteit: ent })
+    }
+  }
+  return docs
 }
 
 export function laatsteMaand(idx) {

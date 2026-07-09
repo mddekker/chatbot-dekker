@@ -11,7 +11,7 @@ create table if not exists public.snapshots (
   id uuid primary key default gen_random_uuid(),
   maand date not null,
   entiteit text not null,
-  bron text not null check (bron in ('wenv', 'productiviteit')),
+  bron text not null check (bron in ('wenv', 'productiviteit', 'context')),
   data jsonb not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

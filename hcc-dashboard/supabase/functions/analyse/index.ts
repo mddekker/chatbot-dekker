@@ -13,7 +13,11 @@ const SYSTEEM_INSTRUCTIE =
   'Onderscheid incidenten van structurele patronen op basis van de trenddata. ' +
   "Corrigeer regiovergelijkingen voor interne verrekening (IKV) voordat je regio's als goed of slecht bestempelt. " +
   'Markeer aannames expliciet als [Afleiding] en meld het als data ontbreekt in plaats van gaten op te vullen. ' +
-  'Geen jargon, geen wolligheid, Nederlands, geen em dashes.'
+  'Geen jargon, geen wolligheid, Nederlands, geen em dashes. ' +
+  'Als er contextdocumenten zijn meegeleverd (rapportages in tekstvorm): gebruik ze om de cijfers te verklaren ' +
+  'of te ontkrachten en verwijs dan naar de bestandsnaam. ' +
+  'Structureer je antwoord in Markdown: begin met "## Conclusie", daarna per entiteit "## <naam>" met maximaal ' +
+  'drie kernpunten als opsomming (kerncijfers vet), sluit af met "## Aanbevelingen" als genummerde lijst.'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
