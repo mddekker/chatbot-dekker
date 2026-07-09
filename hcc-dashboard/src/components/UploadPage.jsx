@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { leesWerkboekVeilig } from '../lib/detectFile.js'
 import { parseWenV, controleerAansluiting } from '../lib/parseWenV.js'
 import { parseProductiviteit } from '../lib/parseProductiviteit.js'
 import { parseContextDocument, CONTEXT_SUGGESTIES } from '../lib/parseContext.js'
+import { bepaalRapportagemaand } from '../lib/detecteerMaand.js'
 import { bewaarSnapshots } from '../lib/store.js'
 import { contextDocs } from '../lib/kpi.js'
 import { REGIOS, HCC, entiteitLabel, maandIso, maandLabel } from '../lib/entities.js'
@@ -16,6 +17,8 @@ export default function UploadPage({ idx, naOpslaan }) {
   const [sleep, setSleep] = useState(false)
   const [jaar, setJaar] = useState(new Date().getFullYear())
   const [maandNr, setMaandNr] = useState(null)
+  const [maandBron, setMaandBron] = useState(null) // waar de automatische keuze vandaan komt
+  const [handmatig, setHandmatig] = useState(false) // gebruiker heeft zelf gekozen
   const [bezig, setBezig] = useState(false)
   const [opgeslagen, setOpgeslagen] = useState(null)
   const [fout, setFout] = useState(null)
@@ -39,16 +42,11 @@ export default function UploadPage({ idx, naOpslaan }) {
         } else {
           const { workbook, type } = await leesWerkboekVeilig(file)
           if (type === 'wenv') {
-            const res = parseWenV(workbook)
             item.type = 'wenv'
-            item.resultaat = res
-            if (res.periode) setMaandNr((m) => m ?? res.periode)
+            item.resultaat = parseWenV(workbook)
           } else if (type === 'productiviteit') {
-            const res = parseProductiviteit(workbook, { bestandsnaam: file.name })
             item.type = 'productiviteit'
-            item.resultaat = res
-            if (res.jaar) setJaar(res.jaar)
-            if (res.laatsteActueleMaand) setMaandNr((m) => m ?? res.laatsteActueleMaand)
+            item.resultaat = parseProductiviteit(workbook, { bestandsnaam: file.name })
           } else {
             // Onbekende Excel: probeer de inhoud als context voor de analyse.
             item.type = 'context'
@@ -81,6 +79,21 @@ export default function UploadPage({ idx, naOpslaan }) {
   const wenvBestanden = geslaagd.filter((b) => b.type === 'wenv')
   const prodBestanden = geslaagd.filter((b) => b.type === 'productiviteit')
   const contextBestanden = geslaagd.filter((b) => b.type === 'context')
+
+  // De app bepaalt de rapportagemaand zelf; de gebruiker hoeft alleen nog te
+  // corrigeren als de detectie er onverhoopt naast zit.
+  useEffect(() => {
+    if (handmatig || !geslaagd.length) return
+    const keuze = bepaalRapportagemaand({
+      wenv: wenvBestanden.map((b) => b.resultaat),
+      prod: prodBestanden.map((b) => b.resultaat),
+      context: contextBestanden.map((b) => ({ bestandsnaam: b.naam, tekst: b.resultaat.tekst })),
+      bestaandeMaanden: idx.maanden,
+    })
+    setMaandNr(keuze.maand)
+    setJaar(keuze.jaar)
+    setMaandBron(keuze.bron)
+  }, [bestanden, handmatig, idx])
 
   const validatie = useMemo(() => {
     if (!geslaagd.length) return null
@@ -157,6 +170,8 @@ export default function UploadPage({ idx, naOpslaan }) {
       await bewaarSnapshots(rijen)
       setOpgeslagen(rijen.length)
       setBestanden([])
+      setHandmatig(false)
+      setMaandBron(null)
       await naOpslaan()
     } catch (e) {
       setFout(`Opslaan mislukt: ${e.message}`)
@@ -256,7 +271,11 @@ export default function UploadPage({ idx, naOpslaan }) {
 
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 14, flexWrap: 'wrap' }}>
             <label>Rapportagemaand:</label>
-            <select className="maand-select" value={maandNr ?? ''} onChange={(e) => setMaandNr(parseInt(e.target.value, 10))}>
+            <select
+              className="maand-select"
+              value={maandNr ?? ''}
+              onChange={(e) => { setHandmatig(true); setMaandNr(parseInt(e.target.value, 10)) }}
+            >
               <option value="" disabled>maand…</option>
               {MAAND_OPTIES.map((m) => (
                 <option key={m} value={m}>{maandLabel(maandIso(2000, m)).split(' ')[0]}</option>
@@ -267,12 +286,20 @@ export default function UploadPage({ idx, naOpslaan }) {
               className="maand-select"
               style={{ width: 90 }}
               value={jaar}
-              onChange={(e) => setJaar(parseInt(e.target.value, 10) || jaar)}
+              onChange={(e) => { setHandmatig(true); setJaar(parseInt(e.target.value, 10) || jaar) }}
             />
+            {!handmatig && maandBron && (
+              <span className="badge context" title={`Herkend uit: ${maandBron}`}>automatisch herkend</span>
+            )}
             <button className="knop primair" onClick={opslaan} disabled={bezig || !maand || !geslaagd.length}>
               {bezig ? 'Bezig met opslaan…' : overschrijft ? `Opslaan (overschrijft ${maandLabel(maand)})` : maand ? `Opslaan als ${maandLabel(maand)}` : 'Opslaan'}
             </button>
           </div>
+          {!handmatig && maandBron && (
+            <p style={{ color: 'var(--muted)', fontSize: 12.5, margin: '8px 0 0' }}>
+              Maand automatisch bepaald op basis van {maandBron}. Klopt hij niet, pas hem dan hierboven aan.
+            </p>
+          )}
           {overschrijft && (
             <p className="waarschuwing-tekst" style={{ marginBottom: 0 }}>
               Let op: voor {maandLabel(maand)} bestaat al data ({overschrijft.join(', ')}). Opslaan overschrijft die na bevestiging.
