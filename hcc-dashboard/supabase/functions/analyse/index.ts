@@ -44,6 +44,13 @@ Deno.serve(async (req) => {
     return antwoord({ error: 'Niet ingelogd' }, 401)
   }
 
+  // In een gedeeld Supabase-project: beperk de functie tot het dashboard-account.
+  // Zet hiervoor het secret DASHBOARD_EMAIL (supabase secrets set DASHBOARD_EMAIL=...).
+  const toegestaanEmail = Deno.env.get('DASHBOARD_EMAIL')
+  if (toegestaanEmail && userData.user.email?.toLowerCase() !== toegestaanEmail.toLowerCase()) {
+    return antwoord({ error: 'Geen toegang met dit account' }, 403)
+  }
+
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
   if (!apiKey) return antwoord({ error: 'ANTHROPIC_API_KEY is niet gezet als secret' }, 500)
 

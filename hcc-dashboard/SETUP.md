@@ -43,16 +43,19 @@ Deze handleiding begint bij nul en veronderstelt niets als bekend. Doorloop de s
 
 1. Klik in het Supabase-dashboard in het linkermenu op **SQL Editor** (icoon met `>_`).
 2. Klik op **New query** (of het plusje linksboven).
-3. Open het bestand `supabase/schema.sql` uit dit project, kopieer de volledige inhoud en plak die in het grote tekstvak.
-4. Klik rechtsonder op de groene knop **Run** (of druk Ctrl+Enter).
-5. Onderin verschijnt `Success. No rows returned` — dat is goed.
-6. Controle: klik links op **Table Editor**; je ziet nu de tabellen `snapshots` en `analyses`, beide met een schildje/label **RLS enabled**.
+3. Open het bestand `supabase/schema.sql` uit dit project en vervang op één plek `JOUW-EMAIL@voorbeeld.nl` door het e-mailadres van je eigen dashboard-account (stap 4).
+4. Kopieer daarna de volledige inhoud en plak die in het grote tekstvak.
+5. Klik rechtsonder op de groene knop **Run** (of druk Ctrl+Enter).
+6. Onderin verschijnt `Success. No rows returned` — dat is goed.
+7. Controle: klik links op **Table Editor**; je ziet nu de tabellen `snapshots` en `analyses`, beide met een schildje/label **RLS enabled**.
 
-Wat je zojuist aanzette: Row Level Security zorgt dat de tabellen alleen leesbaar en schrijfbaar zijn voor ingelogde gebruikers. Zonder login geeft de database niets terug, ook al staat de anon key in de browser.
+Wat je zojuist aanzette: Row Level Security zorgt dat de tabellen alleen leesbaar en schrijfbaar zijn voor het account met precies dat e-mailadres. Andere (toekomstige) gebruikers in hetzelfde Supabase-project — bijvoorbeeld van een andere app — kunnen er niet bij, en zonder login geeft de database sowieso niets terug, ook al staat de anon key in de browser. Het script is veilig om te draaien in een bestaand project: het maakt alleen deze twee nieuwe tabellen aan en raakt verder niets aan.
 
 ## Stap 4: Signups uitzetten en je eigen account aanmaken
 
 Er is precies één gebruiker: jij. Publieke registratie gaat uit, het account maken we handmatig aan.
+
+Let op bij een gedeeld Supabase-project: de signup-instelling geldt voor het hele project. Draait er in hetzelfde project een andere app die registratie nodig heeft, sla het uitzetten dan over — de Row Level Security uit stap 3 beschermt de data ook als er andere accounts bestaan.
 
 **Signups uitzetten:**
 1. Klik links op **Authentication** en dan op **Sign In / Providers** (bij oudere versies: **Providers**).
@@ -105,7 +108,10 @@ supabase link --project-ref JOUW_PROJECT_REF
 # 3. De Anthropic API-key als secret zetten (alleen server-side!)
 supabase secrets set ANTHROPIC_API_KEY=sk-ant-JOUW_KEY
 
-# 4. De functie deployen
+# 4. Alleen jouw account mag de functie gebruiken (zelfde e-mailadres als stap 3/4)
+supabase secrets set DASHBOARD_EMAIL=jouw@email.nl
+
+# 5. De functie deployen
 supabase functions deploy analyse
 ```
 
