@@ -1,7 +1,8 @@
 import { supabase, demoModus } from './supabase.js'
-import { ALLE_ENTITEITEN } from './entities.js'
+import { ALLE_ENTITEITEN, REGIOS } from './entities.js'
 import { trendReeksen, kpiTegels, contextDocs } from './kpi.js'
 import { brutalFacts } from './brutalFacts.js'
+import { reviewVragen } from './reviewVragen.js'
 
 // Totaalbudget voor contextteksten in de payload (tekens).
 const MAX_CONTEXT_TOTAAL = 60000
@@ -17,6 +18,7 @@ export function bouwAnalysePayload(idx, maand) {
       kpis: kpiTegels(idx, ent, maand).map(({ sparkline, ...t }) => t),
       trend6m: trendReeksen(idx, ent, maand).slice(-6),
       bevindingen: brutalFacts(idx, ent, maand).map((b) => b.tekst),
+      conceptReviewvragen: REGIOS.includes(ent) ? reviewVragen(idx, ent, maand).map((v) => v.vraag) : undefined,
     }
   }
 
@@ -35,9 +37,13 @@ export function bouwAnalysePayload(idx, maand) {
     // een nette Markdown-structuur zonder dat de Edge Function hoeft te wijzigen.
     outputInstructie:
       'Structureer je antwoord in Markdown: begin met "## Conclusie", daarna per entiteit een kopje ' +
-      '"## <naam>" met maximaal drie kernpunten als opsomming (kerncijfers **vet**), sluit af met ' +
-      '"## Aanbevelingen" als genummerde lijst. Betrek de meegeleverde contextdocumenten expliciet ' +
-      'waar ze de cijfers verklaren of tegenspreken, met bronvermelding (bestandsnaam).',
+      '"## <naam>" met maximaal drie kernpunten als opsomming (kerncijfers **vet**). Sluit elke regio af met ' +
+      '"### Reviewgesprek": drie tot vijf scherpe vragen die de Algemeen Directeur deze maand aan de ' +
+      'regiodirecteur moet stellen. Bouw voort op de meegeleverde conceptReviewvragen: scherp ze aan met de ' +
+      'trend en de contextdocumenten, schrap wat dubbel is en voeg toe wat ontbreekt. Vragen moeten cijfers ' +
+      'bevatten en om een besluit of actie vragen, niet om uitleg alleen. Eindig met "## Aanbevelingen" als ' +
+      'genummerde lijst. Betrek de contextdocumenten expliciet waar ze de cijfers verklaren of tegenspreken, ' +
+      'met bronvermelding (bestandsnaam).',
     entiteiten,
     contextDocumenten: context,
   }

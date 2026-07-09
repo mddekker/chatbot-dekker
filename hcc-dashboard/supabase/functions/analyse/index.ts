@@ -17,7 +17,10 @@ const SYSTEEM_INSTRUCTIE =
   'Als er contextdocumenten zijn meegeleverd (rapportages in tekstvorm): gebruik ze om de cijfers te verklaren ' +
   'of te ontkrachten en verwijs dan naar de bestandsnaam. ' +
   'Structureer je antwoord in Markdown: begin met "## Conclusie", daarna per entiteit "## <naam>" met maximaal ' +
-  'drie kernpunten als opsomming (kerncijfers vet), sluit af met "## Aanbevelingen" als genummerde lijst.'
+  'drie kernpunten als opsomming (kerncijfers vet). Sluit elke regio af met "### Reviewgesprek": drie tot vijf ' +
+  'scherpe vragen voor het maandgesprek met de regiodirecteur, voortbouwend op eventuele meegeleverde ' +
+  'conceptvragen; elke vraag bevat cijfers en vraagt om een besluit of actie. ' +
+  'Eindig met "## Aanbevelingen" als genummerde lijst.'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
