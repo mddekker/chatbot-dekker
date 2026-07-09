@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import { brutalFacts } from '../lib/brutalFacts.js'
+import { reviewVragen } from '../lib/reviewVragen.js'
 import { genereerAnalyse } from '../lib/analyseApi.js'
 import { haalAnalyseOp, bewaarAnalyse } from '../lib/store.js'
-import { maandLabel, entiteitLabel } from '../lib/entities.js'
+import { maandLabel, entiteitLabel, REGIOS } from '../lib/entities.js'
 import { contextDocs } from '../lib/kpi.js'
 import Markdown from '../lib/markdown.jsx'
 
 export default function AnalyseBlok({ idx, ent, maand }) {
   const bevindingen = brutalFacts(idx, ent, maand)
   const context = contextDocs(idx, maand)
+  const vragen = REGIOS.includes(ent) ? reviewVragen(idx, ent, maand) : []
   const [analyse, setAnalyse] = useState(null)
   const [bezig, setBezig] = useState(false)
   const [fout, setFout] = useState(null)
@@ -45,6 +47,20 @@ export default function AnalyseBlok({ idx, ent, maand }) {
           <span>{b.tekst}</span>
         </div>
       ))}
+
+      {vragen.length > 0 && (
+        <div className="review-blok">
+          <h3>Reviewgesprek {entiteitLabel(ent)} — stel deze vragen</h3>
+          <ol>
+            {vragen.map((v, i) => (
+              <li key={i}>
+                <span className="review-thema">{v.thema}</span>
+                {v.vraag}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       <div className="geen-print" style={{ marginTop: 14 }}>
         <button className="knop primair" onClick={genereer} disabled={bezig}>
