@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ROLES, CONSULT_TYPES, QUESTIONS, MAX_QUESTIONS } from './lib/questions.js'
+import {
+  ROLES,
+  CONSULT_TYPES,
+  QUESTIONS,
+  MAX_QUESTIONS,
+  questionsForConsultType,
+} from './lib/questions.js'
 import { checkAnswer, verifyPassword, storedPassword } from './lib/api.js'
 import PasswordGate from './PasswordGate.jsx'
 import QuestionStep from './QuestionStep.jsx'
@@ -29,12 +35,13 @@ export default function App() {
   const [functie, setFunctie] = useState('')
   const [naam, setNaam] = useState('')
 
+  const [baseSet, setBaseSet] = useState(QUESTIONS)
   const [queue, setQueue] = useState(QUESTIONS)
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState({})
   const [checking, setChecking] = useState(false)
 
-  const followUpBudget = MAX_QUESTIONS - QUESTIONS.length
+  const followUpBudget = MAX_QUESTIONS - baseSet.length
 
   useEffect(() => {
     // Zonder ingesteld SITE_PASSWORD geeft de server altijd ok: dan geen slot.
@@ -48,8 +55,8 @@ export default function App() {
     const vragen = []
     for (const q of queue) {
       const value = answers[q.id]
-      // Deze twee gaan als aparte velden mee, niet als vraag-antwoord in de brief.
-      if (q.id === 'toestemming' || q.id === 'aandachtspunten') continue
+      // Deze gaan als aparte velden mee, niet als vraag-antwoord in de brief.
+      if (q.id === 'toestemming' || q.id === 'aandachtspunten' || q.id === 'instemming') continue
       const text = answerToText(q, value)
       if (!text) continue
       if (q.isFollowUp) {
@@ -70,6 +77,7 @@ export default function App() {
         functie: functie.trim(),
         naam: naam.trim(),
         toestemming: answers.toestemming || 'nee',
+        instemming: answers.instemming || '',
         aandachtspunten: (answers.aandachtspunten || '').trim(),
         vragen: vragen.map(({ vraag, antwoord }) => ({ vraag, antwoord })),
       },
@@ -77,7 +85,9 @@ export default function App() {
   }, [phase, queue, answers, role, consultType, taal, datum, functie, naam])
 
   function startQuestions() {
-    setQueue(QUESTIONS)
+    const set = questionsForConsultType(consultType)
+    setBaseSet(set)
+    setQueue(set)
     setIndex(0)
     setAnswers({})
     setPhase('questions')
@@ -85,6 +95,13 @@ export default function App() {
 
   async function submitAnswer(question, value) {
     const nextAnswers = { ...answers, [question.id]: value }
+
+    // Zonder instemming van de werknemer (preventief/arbo-spreekuur) geen brief.
+    if (question.id === 'instemming' && value === 'Nee') {
+      setAnswers(nextAnswers)
+      setPhase('geen-instemming')
+      return
+    }
 
     let nextQueue = queue
 
@@ -303,6 +320,32 @@ export default function App() {
             onSubmit={submitAnswer}
             onBack={goBack}
           />
+        )}
+
+        {access === 'open' && phase === 'geen-instemming' && (
+          <section className="card">
+            <h2>Geen terugkoppeling mogelijk</h2>
+            <p className="intro">
+              De werknemer heeft niet ingestemd met een terugkoppeling aan de
+              leidinggevende. Bij een preventief consult of
+              arbeidsomstandighedenspreekuur is die instemming een voorwaarde: zonder
+              instemming blijft het bezoek aan het spreekuur vertrouwelijk en wordt er
+              géén terugkoppeling opgesteld.
+            </p>
+            <p className="note">
+              Tip: bespreek met de werknemer wat er wél gedeeld mag worden. Signalen
+              over arbeidsomstandigheden die niet tot een persoon herleidbaar zijn, kun
+              je buiten deze tool om op groepsniveau aan de werkgever meegeven.
+            </p>
+            <div className="button-row">
+              <button type="button" className="btn btn-ghost" onClick={() => setPhase('questions')}>
+                Terug naar de vraag
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => setPhase('context')}>
+                Nieuwe terugkoppeling
+              </button>
+            </div>
+          </section>
         )}
 
         {access === 'open' && phase === 'result' && generationInput && (

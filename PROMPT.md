@@ -51,7 +51,13 @@ belastbaarheid terugkoppelen; bij arboverpleegkundige of POB voegt de tool autom
 de formulering toe dat de terugkoppeling plaatsvindt onder verantwoordelijkheid van en
 na afstemming met de bedrijfsarts.
 
-**Stap 2: Vragenflow.** Eén vraag per scherm, met voortgangsindicator. De kernvragen:
+**Stap 2: Vragenflow.** Eén vraag per scherm, met voortgangsindicator. De vragenset
+hangt af van het type spreekuur: verzuimspreekuur en vervolgconsult krijgen de
+verzuimgerichte set hieronder; preventief consult en arbeidsomstandighedenspreekuur
+krijgen een eigen, kortere set (verderop beschreven), omdat de werknemer dan niet
+(per se) ziek is.
+
+De kernvragen (verzuimspreekuur en vervolgconsult):
 
 1. Wat was de aanleiding van dit spreekuur? (vrije tekst met suggestiechips)
 2. Wat kan de werknemer op dit moment wél? Denk aan taken, uren per dag/week, eigen
@@ -84,6 +90,31 @@ na afstemming met de bedrijfsarts.
     houden of wat erin moet worden opgenomen (iets dat zeker benoemd moet worden, iets
     dat juist niet in de brief hoort, een gevoeligheid in de relatie met de
     leidinggevende, een gewenst accent).
+
+**Vragenset preventief consult en arbeidsomstandighedenspreekuur** (de werknemer is
+niet ziek gemeld, dus geen verzuim- of belastbaarheidsvragen):
+
+1. Heeft de werknemer ingestemd met een terugkoppeling aan de leidinggevende?
+   (Ja / Nee). Instemming is bij deze spreekuren voorwaarde: bij Nee toont de app een
+   duidelijke melding dat het spreekuurbezoek vertrouwelijk blijft en wordt er géén
+   terugkoppeling opgesteld (met de tip dat niet-herleidbare signalen op groepsniveau
+   buiten de tool om gedeeld kunnen worden).
+2. Wat was de aanleiding van dit spreekuur? (met suggestiechips zoals eigen vraag van
+   de werknemer, vraag over werkomstandigheden, signalen van werkdruk, duurzame
+   inzetbaarheid)
+3. Wat speelt er, in functionele en werkgerichte termen?
+4. Welke werkfactoren zijn relevant? (zelfde chips als de werkgerelateerd-vervolgvraag)
+5. Welk concreet advies geef je de leidinggevende? (preventief en actiegericht)
+6. Welke afspraken zijn met de werknemer gemaakt? (optioneel)
+7. Is er een vervolgcontact afgesproken, en met wie? (optioneel)
+8. Zijn er nog aandachtspunten voor deze terugkoppelingsbrief? (optioneel)
+
+De brief krijgt bij deze spreekuren een passende structuur zonder verzuimtaal:
+Aanleiding en datum spreekuur / Situatie en relevante werkfactoren / Advies aan
+leidinggevende / Afspraken en vervolg — met de expliciete vermelding dat de werknemer
+heeft ingestemd met de terugkoppeling. Gebruik hiervoor een eigen systeemprompt
+(Nederlands én Engels) met dezelfde harde privacyregels, zonder herstel- of
+re-integratieframing, lengte 120-200 woorden.
 
 **Adaptief:** gebruik de Anthropic API om bij de belangrijkste open antwoorden (wat kan
 wél, beperkingen, advies) te beoordelen of het antwoord concreet genoeg is. Is een
