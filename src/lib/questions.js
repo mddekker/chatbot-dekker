@@ -32,7 +32,8 @@ export const WERKFACTOR_CATEGORIEEN = [
 // Maximaal aantal vragen in de flow, inclusief vervolgvragen.
 export const MAX_QUESTIONS = 13
 
-export const QUESTIONS = [
+// Vragenset voor verzuimspreekuur en vervolgconsult.
+export const VERZUIM_QUESTIONS = [
   {
     id: 'aanleiding',
     label: 'Wat was de aanleiding van dit spreekuur?',
@@ -151,3 +152,98 @@ export const QUESTIONS = [
     adaptiveCheck: false,
   },
 ]
+
+// Vragenset voor preventief consult en arbeidsomstandighedenspreekuur:
+// de werknemer is niet (per se) ziek, dus geen verzuim- of belastbaarheidsvragen.
+// Instemming van de werknemer is bij deze spreekuren voorwaarde voor terugkoppeling.
+export const PREVENTIEF_QUESTIONS = [
+  {
+    id: 'instemming',
+    label: 'Heeft de werknemer ingestemd met een terugkoppeling aan de leidinggevende?',
+    hint: 'Bij een preventief spreekuur of arbeidsomstandighedenspreekuur is instemming van de werknemer voorwaarde. Zonder instemming wordt er geen terugkoppeling opgesteld.',
+    type: 'choice',
+    options: ['Ja', 'Nee'],
+    required: true,
+    adaptiveCheck: false,
+  },
+  {
+    id: 'aanleiding',
+    label: 'Wat was de aanleiding van dit spreekuur?',
+    hint: 'Kort, in eigen woorden. Kies een suggestie of typ zelf. Houd het functioneel en werkgericht.',
+    type: 'text',
+    suggestions: [
+      'Eigen vraag van de werknemer over gezondheid en werk',
+      'Vraag over de werkomstandigheden',
+      'Signalen van werkdruk',
+      'Advies over duurzame inzetbaarheid',
+    ],
+    required: true,
+    adaptiveCheck: false,
+  },
+  {
+    id: 'situatie',
+    label: 'Wat speelt er, in functionele en werkgerichte termen?',
+    hint: 'Beschrijf de situatie zonder medische termen of privé-informatie. Bijvoorbeeld: "de combinatie van piekbelasting en onduidelijke taakverdeling vraagt aandacht".',
+    type: 'textarea',
+    required: true,
+    adaptiveCheck: true,
+  },
+  {
+    id: 'werkfactoren',
+    label: 'Welke werkfactoren zijn relevant?',
+    hint: 'Klik factoren aan en licht kort toe.',
+    type: 'chips-text',
+    chips: WERKFACTOR_CATEGORIEEN,
+    required: false,
+    adaptiveCheck: false,
+  },
+  {
+    id: 'advies',
+    label: 'Welk concreet advies geef je de leidinggevende?',
+    hint: 'Preventief en actiegericht: wat kan de leidinggevende doen?',
+    type: 'textarea',
+    suggestions: [
+      'Werkplek of taken aanpassen',
+      'Gesprek voeren over werkdruk',
+      'Rooster of werktijden bespreken',
+      'Preventieve maatregelen arbeidsomstandigheden',
+    ],
+    required: true,
+    adaptiveCheck: true,
+  },
+  {
+    id: 'afspraken',
+    label: 'Welke afspraken zijn met de werknemer gemaakt?',
+    hint: 'Bijvoorbeeld over vervolgstappen of het gesprek met de leidinggevende.',
+    type: 'textarea',
+    required: false,
+    adaptiveCheck: false,
+  },
+  {
+    id: 'vervolg',
+    label: 'Is er een vervolgcontact afgesproken, en met wie?',
+    hint: 'Laat leeg als niet van toepassing.',
+    type: 'text',
+    required: false,
+    adaptiveCheck: false,
+  },
+  {
+    id: 'aandachtspunten',
+    label: 'Zijn er nog aandachtspunten voor deze terugkoppelingsbrief?',
+    hint: 'Alles wat de tool moet weten of meenemen. Laat leeg als niet van toepassing.',
+    type: 'textarea',
+    required: false,
+    adaptiveCheck: false,
+  },
+]
+
+// Kies de vragenset op basis van het type spreekuur.
+export function questionsForConsultType(consultType) {
+  return consultType === 'Preventief consult' ||
+    consultType === 'Arbeidsomstandighedenspreekuur'
+    ? PREVENTIEF_QUESTIONS
+    : VERZUIM_QUESTIONS
+}
+
+// Compatibiliteit: bestaande imports gebruiken QUESTIONS als standaardset.
+export const QUESTIONS = VERZUIM_QUESTIONS

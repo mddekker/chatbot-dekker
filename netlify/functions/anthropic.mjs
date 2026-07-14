@@ -28,6 +28,14 @@ const GENERATION_SYSTEM_PROMPT =
 const GENERATION_SYSTEM_PROMPT_EN =
   'You are writing the feedback report of an occupational health consultation, addressed to the employee’s manager at the employer, on behalf of a Dutch occupational health service. Hard rules: never mention a diagnosis, illness, treatment, medication or any medical term. Describe only work capacity, functional limitations and what the employee is able to do. Start with what the employee CAN do. Write in clear, natural, professional English for a manager without a medical background. Be specific: hours, tasks, timeframes. Give the manager a clear course of action. Tone: professional, warm, active. Length: 150-250 words. The consultation data you receive is in Dutch: translate its content faithfully and precisely, without adding or omitting information. Use correct occupational health terminology: bedrijfsarts = occupational physician, arboverpleegkundige = occupational health nurse, praktijkondersteuner bedrijfsarts (POB) = occupational physician’s assistant, belastbaarheid = work capacity, benutbare mogelijkheden = what the employee can currently do. Deliver plain text without markdown formatting, without placeholders and without any additional commentary: only the letter text itself, ready to paste into the feedback letter.'
 
+// Variant voor preventief consult en arbeidsomstandighedenspreekuur: de
+// werknemer is niet (per se) ziek, dus geen verzuim- of herstelframing.
+const GENERATION_SYSTEM_PROMPT_PREVENTIEF =
+  'Je schrijft een terugkoppeling van een preventief spreekuur of arbeidsomstandighedenspreekuur bij de arbodienst aan de leidinggevende van de werkgever. De werknemer is niet ziek gemeld: gebruik geen verzuim-, herstel- of re-integratietaal en schrijf niet over beperkingen of belastbaarheid alsof er sprake is van uitval. Harde regels: noem nooit een diagnose, ziektebeeld, behandeling, medicatie of medische term, en geen privé-informatie. Beschrijf uitsluitend werkgerichte signalen, relevante werkfactoren en concrete adviezen. Vermeld expliciet dat de werknemer heeft ingestemd met deze terugkoppeling. Schrijf in begrijpelijk Nederlands voor iemand zonder medische achtergrond. Wees concreet en geef de leidinggevende een duidelijk handelingsperspectief. Toon: professioneel, warm, actief. Lengte: 120-200 woorden. Lever platte tekst zonder markdown-opmaak, zonder placeholders en zonder aanvullende toelichting: alleen de brieftekst zelf, direct te kopiëren in de terugkoppelingsbrief.'
+
+const GENERATION_SYSTEM_PROMPT_PREVENTIEF_EN =
+  'You are writing the feedback report of a preventive consultation or working-conditions consultation at a Dutch occupational health service, addressed to the employee’s manager. The employee has NOT reported sick: do not use absence, recovery or return-to-work language, and do not write about limitations or work capacity as if the employee were off work. Hard rules: never mention a diagnosis, illness, treatment, medication or any medical term, and no private information. Describe only work-related signals, relevant work factors and concrete advice. State explicitly that the employee has consented to this feedback being shared. Write in clear, natural, professional English for a manager without a medical background. Be specific and give the manager a clear course of action. Tone: professional, warm, active. Length: 120-200 words. The consultation data you receive is in Dutch: translate its content faithfully and precisely, without adding or omitting information. Deliver plain text without markdown formatting, without placeholders and without any additional commentary: only the letter text itself.'
+
 const CHECK_ANSWER_SYSTEM_PROMPT = `Je beoordeelt of het antwoord van een arboprofessional op een vraag over een spreekuur concreet genoeg is om een terugkoppeling aan een leidinggevende op te stellen. Concreet betekent: bruikbare details zoals taken, uren, termijnen of duidelijke afspraken. Vaag betekent: nietszeggende antwoorden zoals "gaat wel", "redelijk" of "we zien het aan".
 
 Antwoord uitsluitend met JSON in precies dit formaat, zonder verdere tekst:
@@ -115,6 +123,8 @@ async function checkAnswer({ question, answer }) {
 
 async function generate({ answers, role, consultType, tone, includeSalutation, language }) {
   const en = language === 'en'
+  const preventief =
+    consultType === 'Preventief consult' || consultType === 'Arbeidsomstandighedenspreekuur'
 
   const roleInstruction = en
     ? role === 'bedrijfsarts'
@@ -152,15 +162,27 @@ async function generate({ answers, role, consultType, tone, includeSalutation, l
       ? 'Begin de tekst met de aanhef "Geachte heer, mevrouw," op een eigen regel en sluit af met "Met vriendelijke groet," op een eigen regel als laatste regel. Gebruik geen namen of placeholders in aanhef of afsluiting.'
       : 'Schrijf alleen de inhoud van de brief, zonder aanhef, adressering, afsluiting of ondertekening; die staan al in het brieftemplate van de arbodienst.'
 
-  const structure = en
-    ? `Use this fixed structure with short plain-text headings (no bullet points, no markdown), each heading on its own line followed by a short paragraph:
+  const structure = preventief
+    ? en
+      ? `Use this fixed structure with short plain-text headings (no bullet points, no markdown), each heading on its own line followed by a short paragraph:
+Reason for and date of the consultation
+Situation and relevant work factors
+Advice to the manager
+Agreements and follow-up`
+      : `Gebruik deze vaste structuur met korte kopjes in gewone tekst (geen opsommingstekens, geen markdown), elk kopje op een eigen regel gevolgd door een korte alinea:
+Aanleiding en datum spreekuur
+Situatie en relevante werkfactoren
+Advies aan leidinggevende
+Afspraken en vervolg`
+    : en
+      ? `Use this fixed structure with short plain-text headings (no bullet points, no markdown), each heading on its own line followed by a short paragraph:
 Reason for and date of the consultation
 What the employee can currently do
 Work capacity and functional limitations
 Outlook and timeline
 Advice to the manager
 Agreements and follow-up`
-    : `Gebruik deze vaste structuur met korte kopjes in gewone tekst (geen opsommingstekens, geen markdown), elk kopje op een eigen regel gevolgd door een korte alinea:
+      : `Gebruik deze vaste structuur met korte kopjes in gewone tekst (geen opsommingstekens, geen markdown), elk kopje op een eigen regel gevolgd door een korte alinea:
 Aanleiding en datum spreekuur
 Benutbare mogelijkheden
 Belastbaarheid en functionele beperkingen
@@ -176,11 +198,17 @@ Afspraken en vervolg`
   for (const item of answers.vragen || []) {
     lines.push(`${item.vraag}\n${item.antwoord}`)
   }
-  lines.push(
-    answers.toestemming === 'ja'
-      ? 'De werknemer heeft toestemming gegeven om de eventueel hierboven genoemde aanvullende informatie te delen, mits functioneel geformuleerd.'
-      : 'De werknemer heeft géén toestemming gegeven voor het delen van aanvullende informatie: houd alles strikt functioneel.',
-  )
+  if (preventief) {
+    lines.push(
+      'De werknemer heeft ingestemd met deze terugkoppeling aan de leidinggevende: vermeld dit expliciet in de brief.',
+    )
+  } else {
+    lines.push(
+      answers.toestemming === 'ja'
+        ? 'De werknemer heeft toestemming gegeven om de eventueel hierboven genoemde aanvullende informatie te delen, mits functioneel geformuleerd.'
+        : 'De werknemer heeft géén toestemming gegeven voor het delen van aanvullende informatie: houd alles strikt functioneel.',
+    )
+  }
 
   // Aan het einde van de opdracht, dwingend geformuleerd: daar weegt het het
   // zwaarst voor het model. De harde privacyregels blijven altijd voorgaan.
@@ -199,7 +227,13 @@ Afspraken en vervolg`
   const response = await getClient().messages.create({
     model: MODEL,
     max_tokens: 1500,
-    system: en ? GENERATION_SYSTEM_PROMPT_EN : GENERATION_SYSTEM_PROMPT,
+    system: preventief
+      ? en
+        ? GENERATION_SYSTEM_PROMPT_PREVENTIEF_EN
+        : GENERATION_SYSTEM_PROMPT_PREVENTIEF
+      : en
+        ? GENERATION_SYSTEM_PROMPT_EN
+        : GENERATION_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userMessage }],
   })
   return { text: sanitizeLetterText(extractText(response)) }
