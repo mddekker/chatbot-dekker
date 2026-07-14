@@ -15,6 +15,7 @@ export default function ResultStep({ input, onRestart }) {
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
   const [includeSalutation, setIncludeSalutation] = useState(false)
+  const [language, setLanguage] = useState(input.language || 'nl')
   const started = useRef(false)
 
   async function runPrivacyCheck(letterText) {
@@ -31,13 +32,18 @@ export default function ResultStep({ input, onRestart }) {
     }
   }
 
-  async function runGenerate(tone, salutation = includeSalutation) {
+  async function runGenerate(tone, salutation = includeSalutation, lang = language) {
     setLoading('generate')
     setError('')
     setFindings([])
     setHandled({})
     try {
-      const result = await generateFeedback({ ...input, tone, includeSalutation: salutation })
+      const result = await generateFeedback({
+        ...input,
+        tone,
+        includeSalutation: salutation,
+        language: lang,
+      })
       setText(result.text)
       await runPrivacyCheck(result.text)
     } catch (err) {
@@ -158,6 +164,29 @@ export default function ResultStep({ input, onRestart }) {
         <button type="button" className="btn btn-primary btn-block" onClick={copy} disabled={!text.trim()}>
           {copied ? 'Gekopieerd ✓' : 'Kopieer de tekst'}
         </button>
+
+        <div className="tone-row">
+          <span className="field-label">Taal van de brief:</span>
+          <div className="chip-group">
+            {[
+              { id: 'nl', label: 'Nederlands' },
+              { id: 'en', label: 'Engels' },
+            ].map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                className={`chip ${language === l.id ? 'chip-active' : ''}`}
+                disabled={loading !== '' || language === l.id}
+                onClick={() => {
+                  setLanguage(l.id)
+                  runGenerate('', includeSalutation, l.id)
+                }}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="tone-row">
           <span className="field-label">Opnieuw genereren met andere toon:</span>

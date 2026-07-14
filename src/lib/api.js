@@ -41,8 +41,8 @@ export function checkAnswer(question, answer) {
   return call({ task: 'check_answer', question, answer })
 }
 
-export function generateFeedback({ answers, role, consultType, tone, includeSalutation }) {
-  return call({ task: 'generate', answers, role, consultType, tone, includeSalutation })
+export function generateFeedback({ answers, role, consultType, tone, includeSalutation, language }) {
+  return call({ task: 'generate', answers, role, consultType, tone, includeSalutation, language })
 }
 
 export function privacyCheck(text) {

@@ -25,6 +25,7 @@ export default function App() {
   const [role, setRole] = useState('')
   const [consultType, setConsultType] = useState('')
   const [datum, setDatum] = useState(todayISO())
+  const [taal, setTaal] = useState('nl')
   const [functie, setFunctie] = useState('')
   const [naam, setNaam] = useState('')
 
@@ -63,6 +64,7 @@ export default function App() {
     return {
       role,
       consultType,
+      language: taal,
       answers: {
         datum: formatDateNL(datum),
         functie: functie.trim(),
@@ -72,7 +74,7 @@ export default function App() {
         vragen: vragen.map(({ vraag, antwoord }) => ({ vraag, antwoord })),
       },
     }
-  }, [phase, queue, answers, role, consultType, datum, functie, naam])
+  }, [phase, queue, answers, role, consultType, taal, datum, functie, naam])
 
   function startQuestions() {
     setQueue(QUESTIONS)
@@ -221,6 +223,30 @@ export default function App() {
                 </button>
               ))}
             </div>
+
+            <label className="field-label">Taal van de terugkoppeling</label>
+            <div className="chip-group" role="radiogroup" aria-label="Taal van de terugkoppeling">
+              <button
+                type="button"
+                className={`chip ${taal === 'nl' ? 'chip-active' : ''}`}
+                onClick={() => setTaal('nl')}
+              >
+                Nederlands
+              </button>
+              <button
+                type="button"
+                className={`chip ${taal === 'en' ? 'chip-active' : ''}`}
+                onClick={() => setTaal('en')}
+              >
+                Engels
+              </button>
+            </div>
+            {taal === 'en' && (
+              <p className="note">
+                De vragen blijven Nederlands; alleen de gegenereerde terugkoppeling wordt
+                in zorgvuldig, professioneel Engels opgesteld.
+              </p>
+            )}
 
             <label className="field-label" htmlFor="datum">Datum spreekuur</label>
             <input
