@@ -13,6 +13,7 @@ export default function AnalyseBlok({ idx, ent, maand }) {
   const vragen = REGIOS.includes(ent) ? reviewVragen(idx, ent, maand) : []
   const [analyse, setAnalyse] = useState(null)
   const [bezig, setBezig] = useState(false)
+  const [liveTekst, setLiveTekst] = useState(null) // analyse die nu geschreven wordt
   const [fout, setFout] = useState(null)
 
   useEffect(() => {
@@ -24,14 +25,16 @@ export default function AnalyseBlok({ idx, ent, maand }) {
   async function genereer() {
     setBezig(true)
     setFout(null)
+    setLiveTekst('')
     try {
-      const tekst = await genereerAnalyse(idx, maand)
+      const tekst = await genereerAnalyse(idx, maand, { onVoortgang: setLiveTekst })
       await bewaarAnalyse(maand, tekst)
       setAnalyse({ maand, inhoud: tekst, created_at: new Date().toISOString() })
     } catch (e) {
       setFout(e.message)
     } finally {
       setBezig(false)
+      setLiveTekst(null)
     }
   }
 
@@ -64,7 +67,7 @@ export default function AnalyseBlok({ idx, ent, maand }) {
 
       <div className="geen-print" style={{ marginTop: 14 }}>
         <button className="knop primair" onClick={genereer} disabled={bezig}>
-          {bezig ? 'Bezig met genereren… (kan een minuut duren)' : 'Genereer analyse'}
+          {bezig ? 'Bezig met schrijven…' : 'Genereer analyse'}
         </button>
         {context.length > 0 && (
           <span className="context-hint">
@@ -79,7 +82,13 @@ export default function AnalyseBlok({ idx, ent, maand }) {
         {fout && <div className="fout-melding">{fout}</div>}
       </div>
 
-      {analyse && (
+      {liveTekst !== null && (
+        <div className="ai-analyse">
+          <div className="meta">AI-analyse van {maandLabel(maand)} · wordt nu geschreven…</div>
+          {liveTekst ? <Markdown tekst={liveTekst} /> : <p style={{ color: 'var(--muted)' }}>Verbinden met het model…</p>}
+        </div>
+      )}
+      {liveTekst === null && analyse && (
         <div className="ai-analyse">
           <div className="meta">
             AI-analyse van {maandLabel(analyse.maand || maand)} · gegenereerd op{' '}

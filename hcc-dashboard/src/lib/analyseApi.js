@@ -49,33 +49,64 @@ export function bouwAnalysePayload(idx, maand) {
   }
 }
 
-export async function genereerAnalyse(idx, maand) {
+// Roept de Edge Function rechtstreeks aan zodat het antwoord gestreamd kan
+// worden: de tekst komt woord voor woord binnen (onVoortgang) en de verbinding
+// valt niet meer stil (voorkomt de idle timeout van 150 seconden bij lange
+// analyses). Een oudere, niet-streamende functie (JSON-antwoord) werkt ook nog.
+export async function genereerAnalyse(idx, maand, { onVoortgang } = {}) {
   if (demoModus) {
     throw new Error('AI-analyse is niet beschikbaar in demomodus (vereist de Supabase Edge Function).')
   }
   const payload = bouwAnalysePayload(idx, maand)
-  const { data, error } = await supabase.functions.invoke('analyse', {
-    body: payload,
+
+  const { data: sessieData } = await supabase.auth.getSession()
+  const token = sessieData?.session?.access_token
+  if (!token) throw new Error('Analyse mislukt: niet ingelogd. Log opnieuw in en probeer het nogmaals.')
+
+  const res = await fetch(`${supabaseUrl}/functions/v1/analyse`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: supabaseAnonKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
   })
-  if (error) {
-    // Maak de fout zo concreet mogelijk: statuscode + echte fouttekst.
-    let detail = error.message
-    const status = error.context?.status
+
+  if (!res.ok) {
+    let detail = res.statusText
     try {
-      const body = await error.context?.text()
-      if (body) {
-        try {
-          detail = JSON.parse(body).error || body.slice(0, 300)
-        } catch {
-          detail = body.slice(0, 300)
-        }
+      const body = await res.text()
+      try {
+        detail = JSON.parse(body).error || body.slice(0, 300)
+      } catch {
+        detail = body.slice(0, 300)
       }
     } catch { /* body niet leesbaar */ }
-    if (status === 401) {
+    if (res.status === 401) {
       detail += " — controleer in Supabase of 'Verify JWT with legacy secret' UIT staat bij de functie-instellingen, en log opnieuw in."
     }
-    throw new Error(`Analyse mislukt${status ? ` (status ${status})` : ''}: ${detail}`)
+    throw new Error(`Analyse mislukt (status ${res.status}): ${detail}`)
   }
-  if (!data?.analyse) throw new Error('Analyse mislukt: leeg antwoord van de server.')
-  return data.analyse
+
+  const contentType = res.headers.get('content-type') || ''
+  if (contentType.includes('application/json')) {
+    // Oudere functieversie zonder streaming.
+    const data = await res.json()
+    if (!data?.analyse) throw new Error('Analyse mislukt: leeg antwoord van de server.')
+    return data.analyse
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let tekst = ''
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    tekst += decoder.decode(value, { stream: true })
+    onVoortgang?.(tekst)
+  }
+  tekst += decoder.decode()
+  if (!tekst.trim()) throw new Error('Analyse mislukt: leeg antwoord van de server.')
+  return tekst
 }
