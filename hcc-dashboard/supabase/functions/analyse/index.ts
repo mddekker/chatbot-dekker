@@ -68,6 +68,9 @@ Deno.serve(async (req) => {
     return antwoord({ error: 'Ongeldige JSON' }, 400)
   }
 
+  // Streaming: de tekst wordt woord voor woord doorgestuurd naar de browser.
+  // Zo valt de verbinding nooit stil (geen idle timeout bij lange analyses)
+  // en verschijnt de analyse live in beeld.
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -79,6 +82,7 @@ Deno.serve(async (req) => {
       model: 'claude-sonnet-4-6',
       // Ruim genoeg voor negen entiteiten met kernpunten én reviewvragen.
       max_tokens: 16000,
+      stream: true,
       system: SYSTEEM_INSTRUCTIE,
       messages: [
         {
@@ -92,21 +96,59 @@ Deno.serve(async (req) => {
     }),
   })
 
-  if (!res.ok) {
+  if (!res.ok || !res.body) {
     const detail = await res.text()
     return antwoord({ error: `Anthropic API-fout (${res.status}): ${detail.slice(0, 500)}` }, 502)
   }
 
-  const data = await res.json()
-  let tekst = (data.content ?? [])
-    .filter((blok: { type: string }) => blok.type === 'text')
-    .map((blok: { text: string }) => blok.text)
-    .join('\n')
+  const decoder = new TextDecoder()
+  const encoder = new TextEncoder()
+  const anthropicBody = res.body
+  let buffer = ''
 
-  // Vangnet: meld het expliciet als het antwoord toch tegen de limiet aanliep.
-  if (data.stop_reason === 'max_tokens') {
-    tekst += '\n\n*[Let op: de analyse is afgekapt omdat de maximale lengte werd bereikt.]*'
-  }
+  const stream = new ReadableStream({
+    async start(controller) {
+      const reader = anthropicBody.getReader()
+      try {
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const regels = buffer.split('\n')
+          buffer = regels.pop() ?? ''
+          for (const regel of regels) {
+            if (!regel.startsWith('data:')) continue
+            const data = regel.slice(5).trim()
+            if (!data || data === '[DONE]') continue
+            try {
+              const evt = JSON.parse(data)
+              if (evt.type === 'content_block_delta' && evt.delta?.text) {
+                controller.enqueue(encoder.encode(evt.delta.text))
+              } else if (evt.type === 'message_delta' && evt.delta?.stop_reason === 'max_tokens') {
+                controller.enqueue(
+                  encoder.encode('\n\n*[Let op: de analyse is afgekapt omdat de maximale lengte werd bereikt.]*'),
+                )
+              } else if (evt.type === 'error') {
+                controller.enqueue(
+                  encoder.encode(`\n\n*[Fout tijdens genereren: ${JSON.stringify(evt.error).slice(0, 300)}]*`),
+                )
+              }
+            } catch {
+              // Geen JSON-regel; overslaan.
+            }
+          }
+        }
+      } finally {
+        controller.close()
+      }
+    },
+  })
 
-  return antwoord({ analyse: tekst })
+  return new Response(stream, {
+    headers: {
+      ...CORS_HEADERS,
+      'Content-Type': 'text/plain; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  })
 })
