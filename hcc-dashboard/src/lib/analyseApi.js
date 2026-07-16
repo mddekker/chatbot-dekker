@@ -58,12 +58,23 @@ export async function genereerAnalyse(idx, maand) {
     body: payload,
   })
   if (error) {
+    // Maak de fout zo concreet mogelijk: statuscode + echte fouttekst.
     let detail = error.message
+    const status = error.context?.status
     try {
-      const ctx = await error.context?.json()
-      if (ctx?.error) detail = ctx.error
-    } catch { /* geen JSON-body */ }
-    throw new Error(`Analyse mislukt: ${detail}`)
+      const body = await error.context?.text()
+      if (body) {
+        try {
+          detail = JSON.parse(body).error || body.slice(0, 300)
+        } catch {
+          detail = body.slice(0, 300)
+        }
+      }
+    } catch { /* body niet leesbaar */ }
+    if (status === 401) {
+      detail += " — controleer in Supabase of 'Verify JWT with legacy secret' UIT staat bij de functie-instellingen, en log opnieuw in."
+    }
+    throw new Error(`Analyse mislukt${status ? ` (status ${status})` : ''}: ${detail}`)
   }
   if (!data?.analyse) throw new Error('Analyse mislukt: leeg antwoord van de server.')
   return data.analyse
