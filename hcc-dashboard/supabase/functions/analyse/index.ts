@@ -77,7 +77,8 @@ Deno.serve(async (req) => {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
+      // Ruim genoeg voor negen entiteiten met kernpunten én reviewvragen.
+      max_tokens: 16000,
       system: SYSTEEM_INSTRUCTIE,
       messages: [
         {
@@ -97,10 +98,15 @@ Deno.serve(async (req) => {
   }
 
   const data = await res.json()
-  const tekst = (data.content ?? [])
+  let tekst = (data.content ?? [])
     .filter((blok: { type: string }) => blok.type === 'text')
     .map((blok: { text: string }) => blok.text)
     .join('\n')
+
+  // Vangnet: meld het expliciet als het antwoord toch tegen de limiet aanliep.
+  if (data.stop_reason === 'max_tokens') {
+    tekst += '\n\n*[Let op: de analyse is afgekapt omdat de maximale lengte werd bereikt.]*'
+  }
 
   return antwoord({ analyse: tekst })
 })
