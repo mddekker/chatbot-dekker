@@ -1,4 +1,4 @@
-import { supabase, demoModus } from './supabase.js'
+import { supabase, demoModus, supabaseUrl, supabaseAnonKey } from './supabase.js'
 import { ALLE_ENTITEITEN, REGIOS } from './entities.js'
 import { trendReeksen, kpiTegels, contextDocs } from './kpi.js'
 import { brutalFacts } from './brutalFacts.js'
