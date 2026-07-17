@@ -45,6 +45,6 @@ export function generateFeedback({ answers, role, consultType, tone, includeSalu
   return call({ task: 'generate', answers, role, consultType, tone, includeSalutation, language })
 }
 
-export function privacyCheck(text) {
-  return call({ task: 'privacy_check', text })
+export function privacyCheck(text, language) {
+  return call({ task: 'privacy_check', text, language })
 }

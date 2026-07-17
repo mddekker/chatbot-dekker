@@ -18,11 +18,11 @@ export default function ResultStep({ input, onRestart }) {
   const [language, setLanguage] = useState(input.language || 'nl')
   const started = useRef(false)
 
-  async function runPrivacyCheck(letterText) {
+  async function runPrivacyCheck(letterText, lang = language) {
     setLoading('privacy')
     setError('')
     try {
-      const result = await privacyCheck(letterText)
+      const result = await privacyCheck(letterText, lang)
       setFindings(result.risicos || [])
       setHandled({})
     } catch (err) {
@@ -45,7 +45,8 @@ export default function ResultStep({ input, onRestart }) {
         language: lang,
       })
       setText(result.text)
-      await runPrivacyCheck(result.text)
+      // Taal expliciet doorgeven: bij een taalwissel is de state hier nog oud.
+      await runPrivacyCheck(result.text, lang)
     } catch (err) {
       setError(err.message)
       setLoading('')
