@@ -177,10 +177,14 @@ export default function App() {
 
       <header className="app-header">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true" />
-          <div>
+          <img
+            className="brand-logo"
+            src="/logo-humancapitalcare.png"
+            alt="HumanCapitalCare"
+          />
+          <div className="brand-text">
             <h1>Terugkoppeltool spreekuur</h1>
-            <p>HumanCapitalCare · terugkoppeling aan de leidinggevende</p>
+            <p>Terugkoppeling aan de leidinggevende</p>
           </div>
         </div>
       </header>
