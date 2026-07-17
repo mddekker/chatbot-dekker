@@ -8,8 +8,8 @@
 ---
 
 Bouw een webapp voor bedrijfsartsen, arboverpleegkundigen en praktijkondersteuners
-bedrijfsartsen (POB's) van arbodienst HumanCapitalCare (onderdeel van dezelfde groep
-als ArboNed). De tool helpt hen om na een spreekuur met een werknemer snel een
+bedrijfsartsen (POB's) van arbodienst HumanCapitalCare. De tool helpt hen om na een
+spreekuur met een werknemer snel een
 kwalitatief goede, positief geframede terugkoppeling aan de leidinggevende van de
 werkgever op te stellen.
 
@@ -165,13 +165,13 @@ zelf voordat je deze deelt."
 
 ## Huisstijl
 
-- Rustig en professioneel; kleuren afgestemd op HumanCapitalCare en ArboNed:
+- Rustig en professioneel; kleuren afgestemd op HumanCapitalCare:
   donkerblauw/navy (`#1b3e8e`) als primaire kleur, teal (`#1c9ca6`) als accentkleur,
   veel wit. Eenvoudig aanpasbaar via CSS-variabelen.
-- De logo's van HumanCapitalCare en ArboNed op twee subtiele plekken: als heel licht
-  watermerk (± 5% dekking) rechtsonder op de paginaachtergrond, en naast elkaar in de
-  voettekst. Zet de logobestanden als SVG in `public/` met vaste bestandsnamen zodat
-  ze eenvoudig te vervangen zijn door officiële bestanden.
+- Het officiële HumanCapitalCare-logo op twee subtiele plekken: als heel licht
+  watermerk (± 5% dekking) rechtsonder op de paginaachtergrond, en in de voettekst.
+  Zet het logobestand in `public/` met een vaste bestandsnaam zodat het eenvoudig te
+  vervangen is.
 
 ## Techniek
 

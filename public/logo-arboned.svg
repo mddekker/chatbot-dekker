@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="580" height="160" viewBox="0 0 580 160" role="img" aria-label="ArboNed">
-  <!-- Rode swoosh -->
-  <path d="M14 58 C 150 16 430 8 566 34 C 434 22 160 34 20 66 Z" fill="#c4155e"/>
-  <text x="28" y="138" font-family="system-ui, 'Segoe UI', Arial, sans-serif" font-size="92" font-weight="800" letter-spacing="2" fill="#1b3e8e" textLength="300" lengthAdjust="spacingAndGlyphs">ARBO</text>
-  <text x="336" y="138" font-family="system-ui, 'Segoe UI', Arial, sans-serif" font-size="92" font-weight="300" letter-spacing="2" fill="#33b1e6" textLength="216" lengthAdjust="spacingAndGlyphs">NED</text>
-</svg>

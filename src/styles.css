@@ -1,6 +1,6 @@
 /* Huisstijl HumanCapitalCare — eenvoudig aanpasbaar via deze variabelen. */
 :root {
-  --color-primary: #1b3e8e;        /* donkerblauw (HumanCapitalCare/ArboNed navy) */
+  --color-primary: #1b3e8e;        /* donkerblauw (HumanCapitalCare navy) */
   --color-primary-dark: #142f6b;
   --color-accent: #1c9ca6;         /* teal (HumanCapitalCare) */
   --color-accent-soft: #e2f4f5;
@@ -480,11 +480,6 @@ textarea {
   opacity: 1;
 }
 
-.footer-divider {
-  width: 1px;
-  height: 22px;
-  background: var(--color-border);
-}
 
 @media (min-width: 640px) {
   .app-main {
