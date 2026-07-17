@@ -29,7 +29,7 @@ export default function PasswordGate({ onUnlocked }) {
     <section className="card">
       <h2>Toegang</h2>
       <p className="intro">
-        Deze tool is alleen bedoeld voor professionals van HumanCapitalCare en ArboNed.
+        Deze tool is alleen bedoeld voor professionals van HumanCapitalCare.
         Vul het wachtwoord in dat je hebt ontvangen.
       </p>
       <form onSubmit={submit}>

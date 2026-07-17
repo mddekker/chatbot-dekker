@@ -172,8 +172,7 @@ export default function App() {
   return (
     <div className="app">
       <div className="bg-watermark" aria-hidden="true">
-        <img src="/logo-humancapitalcare.svg" alt="" />
-        <img src="/logo-arboned.svg" alt="" />
+        <img src="/logo-humancapitalcare.png" alt="" />
       </div>
 
       <header className="app-header">
@@ -363,9 +362,7 @@ export default function App() {
 
       <footer className="app-footer">
         <div className="footer-logos">
-          <img src="/logo-humancapitalcare.svg" alt="HumanCapitalCare" />
-          <span className="footer-divider" aria-hidden="true" />
-          <img src="/logo-arboned.svg" alt="ArboNed" />
+          <img src="/logo-humancapitalcare.png" alt="HumanCapitalCare" />
         </div>
         <p>Controleer de tekst altijd zelf voordat je deze deelt.</p>
       </footer>

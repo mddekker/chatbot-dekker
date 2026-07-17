@@ -222,7 +222,12 @@ Afspraken en vervolg`
     ? 'Consultation data, in Dutch (only the completed items; leave out anything missing, without placeholders or unfinished sentences — translate the content faithfully and precisely into natural, professional English):'
     : 'Gegevens uit het spreekuur (alleen ingevulde onderdelen; wat ontbreekt laat je weg uit de tekst, zonder placeholders of open zinnen):'
 
-  const userMessage = `${roleInstruction}\n\n${salutationInstruction}\n\n${structure}\n\n${toneInstruction}\n\n${dataIntro}\n\n${lines.join('\n\n')}${aandachtspuntenInstruction}`
+  // Taalzuiverheid expliciet afdwingen om gemengde brieven te voorkomen.
+  const taalzuiverheid = en
+    ? 'Write the ENTIRE letter in English only, including all headings. Do not leave any Dutch words untranslated.'
+    : 'Schrijf de VOLLEDIGE brief in het Nederlands, inclusief alle kopjes. Gebruik geen Engelse woorden of termen.'
+
+  const userMessage = `${roleInstruction}\n\n${salutationInstruction}\n\n${structure}\n\n${taalzuiverheid}\n\n${toneInstruction}\n\n${dataIntro}\n\n${lines.join('\n\n')}${aandachtspuntenInstruction}`
 
   const response = await getClient().messages.create({
     model: MODEL,
@@ -239,11 +244,20 @@ Afspraken en vervolg`
   return { text: sanitizeLetterText(extractText(response)) }
 }
 
-async function privacyCheck({ text }) {
+async function privacyCheck({ text, language }) {
+  // Taal expliciet afdwingen: uitleg altijd Nederlands, alternatief exact in
+  // de taal van de brief. Zonder taalparameter valt de prompt terug op
+  // "dezelfde taal als de tekst".
+  const taalinstructie =
+    language === 'en'
+      ? '\n\nDeze brief is Engelstalig. Het veld "alternatief" moet daarom in zorgvuldig, professioneel Engels zijn. Het veld "uitleg" blijft in het Nederlands.'
+      : language === 'nl'
+        ? '\n\nDeze brief is Nederlandstalig. Zowel "uitleg" als "alternatief" moeten volledig in het Nederlands zijn, zonder Engelse woorden.'
+        : ''
   const response = await getClient().messages.create({
     model: MODEL,
     max_tokens: 2000,
-    system: PRIVACY_CHECK_SYSTEM_PROMPT,
+    system: PRIVACY_CHECK_SYSTEM_PROMPT + taalinstructie,
     messages: [{ role: 'user', content: text }],
   })
   const parsed = parseJson(extractText(response))
