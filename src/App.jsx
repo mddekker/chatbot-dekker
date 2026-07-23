@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ROLES,
   CONSULT_TYPES,
@@ -10,6 +10,10 @@ import { checkAnswer, verifyPassword, storedPassword } from './lib/api.js'
 import PasswordGate from './PasswordGate.jsx'
 import QuestionStep from './QuestionStep.jsx'
 import ResultStep from './ResultStep.jsx'
+import StatsView from './StatsView.jsx'
+
+// Verborgen beheeringang: alleen bereikbaar via ?beheer in de URL.
+const BEHEER_MODE = new URLSearchParams(window.location.search).has('beheer')
 
 function todayISO() {
   const d = new Date()
@@ -27,6 +31,18 @@ function formatDateNL(iso) {
 export default function App() {
   // 'checking' tot de server heeft gemeld of er een wachtwoord nodig is.
   const [access, setAccess] = useState('checking') // checking | locked | open
+  // Beheerscherm: via ?beheer in de URL, of 5x snel tikken op het logo onderaan.
+  const [beheer, setBeheer] = useState(BEHEER_MODE)
+  const logoTaps = useRef([])
+
+  function logoTap() {
+    const nu = Date.now()
+    logoTaps.current = [...logoTaps.current.filter((t) => nu - t < 3000), nu]
+    if (logoTaps.current.length >= 5) {
+      logoTaps.current = []
+      setBeheer(true)
+    }
+  }
   const [phase, setPhase] = useState('context') // context | questions | result
   const [role, setRole] = useState('')
   const [consultType, setConsultType] = useState('')
@@ -199,7 +215,9 @@ export default function App() {
 
         {access === 'locked' && <PasswordGate onUnlocked={() => setAccess('open')} />}
 
-        {access === 'open' && phase === 'context' && (
+        {access === 'open' && beheer && <StatsView />}
+
+        {access === 'open' && !beheer && phase === 'context' && (
           <section className="card">
             <h2>Rol en context</h2>
             <p className="intro">
@@ -312,7 +330,7 @@ export default function App() {
           </section>
         )}
 
-        {access === 'open' && phase === 'questions' && (
+        {access === 'open' && !beheer && phase === 'questions' && (
           <QuestionStep
             key={queue[index].id}
             question={queue[index]}
@@ -325,7 +343,7 @@ export default function App() {
           />
         )}
 
-        {access === 'open' && phase === 'geen-instemming' && (
+        {access === 'open' && !beheer && phase === 'geen-instemming' && (
           <section className="card">
             <h2>Geen terugkoppeling mogelijk</h2>
             <p className="intro">
@@ -351,7 +369,7 @@ export default function App() {
           </section>
         )}
 
-        {access === 'open' && phase === 'result' && generationInput && (
+        {access === 'open' && !beheer && phase === 'result' && generationInput && (
           <ResultStep
             input={generationInput}
             onRestart={() => {
@@ -366,7 +384,12 @@ export default function App() {
 
       <footer className="app-footer">
         <div className="footer-logos">
-          <img src="/logo-humancapitalcare.png" alt="HumanCapitalCare" />
+          <img
+            src="/logo-humancapitalcare.png"
+            alt="HumanCapitalCare"
+            onClick={logoTap}
+            draggable="false"
+          />
         </div>
         <p>Controleer de tekst altijd zelf voordat je deze deelt.</p>
       </footer>

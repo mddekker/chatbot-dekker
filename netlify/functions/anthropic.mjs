@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { getStore } from '@netlify/blobs'
 
 // De API-key komt uitsluitend uit de environment variable ANTHROPIC_API_KEY
 // (in te stellen in de Netlify site settings). Nooit in de frontend.
@@ -57,6 +58,45 @@ Antwoord uitsluitend met JSON in precies dit formaat, zonder verdere tekst:
 {"risicos": [{"fragment": "letterlijk tekstfragment uit de terugkoppeling", "uitleg": "korte uitleg waarom dit niet mag", "alternatief": "functionele herformulering die het fragment kan vervangen"}]}
 
 Het veld "fragment" moet letterlijk en exact zo in de tekst voorkomen. De "uitleg" is altijd in het Nederlands (voor de professional). Het "alternatief" is in dezelfde taal als de gecontroleerde tekst, beschrijft uitsluitend belastbaarheid, functionele beperkingen of benutbare mogelijkheden en past grammaticaal op de plek van het fragment. Als er geen risico's zijn: {"risicos": []}`
+
+// Gebruiksstatistieken: uitsluitend aantallen, nooit inhoud of persoonsgegevens.
+// Opgeslagen in Netlify Blobs; fouten mogen het genereren nooit blokkeren.
+function vandaagNL() {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Amsterdam' }).format(new Date())
+}
+
+async function telGebruik({ consultType, language }) {
+  try {
+    const store = getStore({ name: 'gebruik', consistency: 'strong' })
+    const stats = (await store.get('stats', { type: 'json' })) || {
+      totaal: 0,
+      perDag: {},
+      perTaal: {},
+      perType: {},
+    }
+    const dag = vandaagNL()
+    stats.totaal += 1
+    stats.perDag[dag] = (stats.perDag[dag] || 0) + 1
+    const taal = language === 'en' ? 'Engels' : 'Nederlands'
+    stats.perTaal[taal] = (stats.perTaal[taal] || 0) + 1
+    const type = consultType || 'Onbekend'
+    stats.perType[type] = (stats.perType[type] || 0) + 1
+    await store.setJSON('stats', stats)
+  } catch (err) {
+    console.error('Statistieken bijwerken mislukt (genereren gaat gewoon door):', err?.message)
+  }
+}
+
+async function leesGebruik() {
+  try {
+    const store = getStore({ name: 'gebruik', consistency: 'strong' })
+    const stats = await store.get('stats', { type: 'json' })
+    return stats || { totaal: 0, perDag: {}, perTaal: {}, perType: {} }
+  } catch (err) {
+    console.error('Statistieken lezen mislukt:', err?.message)
+    return { error: 'Statistieken zijn op dit moment niet beschikbaar.' }
+  }
+}
 
 function extractText(response) {
   const block = response.content.find((b) => b.type === 'text')
@@ -241,6 +281,9 @@ Afspraken en vervolg`
         : GENERATION_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userMessage }],
   })
+  // Geslaagde generatie meetellen (alleen aantallen, geen inhoud).
+  await telGebruik({ consultType, language })
+
   return { text: sanitizeLetterText(extractText(response)) }
 }
 
@@ -304,6 +347,21 @@ export default async (req) => {
     switch (body.task) {
       case 'check_answer':
         return Response.json(await checkAnswer(body))
+      case 'stats': {
+        // Alleen voor de beheerder: apart wachtwoord in STATS_PASSWORD,
+        // los van het gedeelde toegangswachtwoord van de pilotgroep.
+        const beheerWachtwoord = process.env.STATS_PASSWORD || ''
+        if (!beheerWachtwoord) {
+          return Response.json(
+            { error: 'Statistieken zijn niet geconfigureerd: stel STATS_PASSWORD in bij de Netlify environment variables.' },
+            { status: 500 },
+          )
+        }
+        if (body.beheerwachtwoord !== beheerWachtwoord) {
+          return Response.json({ error: 'Onjuist beheerderswachtwoord.' }, { status: 401 })
+        }
+        return Response.json(await leesGebruik())
+      }
       case 'generate':
         return Response.json(await generate(body))
       case 'privacy_check':

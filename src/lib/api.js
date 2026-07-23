@@ -48,3 +48,7 @@ export function generateFeedback({ answers, role, consultType, tone, includeSalu
 export function privacyCheck(text, language) {
   return call({ task: 'privacy_check', text, language })
 }
+
+export function fetchStats(beheerwachtwoord) {
+  return call({ task: 'stats', beheerwachtwoord })
+}
