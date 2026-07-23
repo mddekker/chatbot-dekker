@@ -609,3 +609,86 @@ textarea {
     font-size: 1.42rem;
   }
 }
+
+/* Gebruiksstatistieken (beheerscherm) */
+.stats-totaal {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0.5rem 0 1.4rem;
+  padding: 1rem 1.1rem;
+  background: var(--color-accent-soft);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary-dark);
+}
+
+.stats-getal {
+  font-size: 2rem;
+  font-weight: 750;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-dagen {
+  margin: 0 0 1.4rem;
+}
+
+.stats-dag {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.35rem;
+}
+
+.stats-dag-label {
+  width: 82px;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-dag-balk-track {
+  flex: 1;
+  height: 10px;
+  background: #e5ebf2;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.stats-dag-balk {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-accent), #33b1e6);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.stats-dag-aantal {
+  width: 30px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 0.85rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-lijst {
+  margin: 0 0 1.2rem;
+  padding-left: 1.2rem;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.stats-terug {
+  display: inline-block;
+  margin-top: 1rem;
+  font-size: 0.88rem;
+  color: var(--color-muted);
+}
+
+.button-row a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
