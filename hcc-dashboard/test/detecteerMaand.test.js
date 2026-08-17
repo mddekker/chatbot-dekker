@@ -16,6 +16,11 @@ describe('maandUitTekst', () => {
     expect(maandUitTekst('verzuimrapportage oktober')).toEqual({ maand: 10, jaar: null })
   })
 
+  it('herkent de periodenotatie P7 met jaartal', () => {
+    expect(maandUitTekst('HCC Cijfers P7-2026.xlsx')).toEqual({ maand: 7, jaar: 2026 })
+    expect(maandUitTekst('rapportage periode 3')).toEqual({ maand: 3, jaar: null })
+  })
+
   it('geeft null bij tekst zonder maand', () => {
     expect(maandUitTekst('algemeen rapport definitieve versie')).toBeNull()
   })

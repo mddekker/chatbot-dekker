@@ -70,7 +70,54 @@ function leesVrijeExcel(buffer) {
   return delen.join('\n\n')
 }
 
-// Hoofd-ingang voor contextdocumenten (Word, PowerPoint, vrije Excel).
+// Outlook-bericht (.msg): OLE/CFB-container; onderwerp en tekstbody zitten in
+// vaste property-streams. De CFB-lezer van SheetJS kan de container openen.
+async function leesMsg(buffer) {
+  const cfb = XLSX.CFB.read(new Uint8Array(buffer), { type: 'array' })
+  const leesProp = (code) => {
+    const unicode = cfb.FileIndex.find((f) => f.name === `__substg1.0_${code}001F`)
+    if (unicode?.content?.length) return new TextDecoder('utf-16le').decode(new Uint8Array(unicode.content))
+    const ansi = cfb.FileIndex.find((f) => f.name === `__substg1.0_${code}001E`)
+    if (ansi?.content?.length) return new TextDecoder('latin1').decode(new Uint8Array(ansi.content))
+    return null
+  }
+  const onderwerp = leesProp('0037')
+  const body = leesProp('1000')
+  if (!body && !onderwerp) {
+    throw new Error(
+      'Geen leesbare tekst gevonden in dit Outlook-bericht (waarschijnlijk alleen opgemaakte HTML/RTF-inhoud). ' +
+      'Kopieer de tekst naar Word (.docx) of sla de bijlage los op en upload die.'
+    )
+  }
+  return [onderwerp ? `Onderwerp: ${onderwerp}` : null, body].filter(Boolean).join('\n\n')
+}
+
+// E-mail in .eml-formaat (platte MIME-tekst).
+function leesEml(buffer) {
+  const raw = new TextDecoder('utf-8').decode(new Uint8Array(buffer))
+  const onderwerp = raw.match(/^Subject:[ \t]*(.+)$/im)?.[1]?.trim()
+  // Voorkeur: het text/plain-deel; anders alles na de headers.
+  let body
+  const plain = raw.match(/Content-Type:\s*text\/plain[^]*?\r?\n\r?\n([^]*?)(?:\r?\n--|$)/i)
+  if (plain) {
+    body = plain[1]
+    if (/Content-Transfer-Encoding:\s*base64/i.test(raw.slice(0, raw.indexOf(plain[1])))) {
+      try {
+        body = new TextDecoder('utf-8').decode(
+          Uint8Array.from(atob(body.replace(/\s+/g, '')), (c) => c.charCodeAt(0))
+        )
+      } catch { /* laat base64 staan als decoderen mislukt */ }
+    }
+  } else {
+    const kop = raw.search(/\r?\n\r?\n/)
+    body = kop >= 0 ? raw.slice(kop) : raw
+  }
+  // Quoted-printable ruwweg terugvertalen.
+  body = body.replace(/=\r?\n/g, '').replace(/=([0-9A-F]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+  return [onderwerp ? `Onderwerp: ${onderwerp}` : null, body.trim()].filter(Boolean).join('\n\n')
+}
+
+// Hoofd-ingang voor contextdocumenten (Word, PowerPoint, e-mail, vrije Excel).
 // Resultaat: { soort, tekst, entiteit (of null), afgekapt }
 export async function parseContextDocument(file) {
   const naam = file.name.toLowerCase()
@@ -84,6 +131,12 @@ export async function parseContextDocument(file) {
   } else if (naam.endsWith('.pptx')) {
     soort = 'powerpoint'
     tekst = await leesPptx(buffer)
+  } else if (naam.endsWith('.msg')) {
+    soort = 'e-mail'
+    tekst = await leesMsg(buffer)
+  } else if (naam.endsWith('.eml')) {
+    soort = 'e-mail'
+    tekst = leesEml(buffer)
   } else if (naam.endsWith('.xlsx') || naam.endsWith('.xlsm') || naam.endsWith('.xls')) {
     soort = 'excel'
     tekst = leesVrijeExcel(buffer)
@@ -92,7 +145,9 @@ export async function parseContextDocument(file) {
       'Oud Office-formaat (.doc/.ppt) wordt niet ondersteund. Open het bestand en sla het op als .docx of .pptx.'
     )
   } else {
-    throw new Error('Bestandstype niet ondersteund. Upload Excel (.xlsx), Word (.docx) of PowerPoint (.pptx).')
+    throw new Error(
+      'Bestandstype niet ondersteund. Upload Excel (.xlsx), Word (.docx), PowerPoint (.pptx) of e-mail (.msg/.eml).'
+    )
   }
 
   if (!tekst || !tekst.trim()) {
