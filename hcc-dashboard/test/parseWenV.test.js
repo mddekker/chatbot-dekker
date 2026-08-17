@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import * as XLSX from 'xlsx'
 import { parseWenV, controleerAansluiting } from '../src/lib/parseWenV.js'
-import { maakWenVWorkbook } from './fixtures.js'
+import { maakWenVWorkbook, maakWenVNieuwWorkbook } from './fixtures.js'
 
 describe('parseWenV', () => {
   const wb = maakWenVWorkbook({ periode: 6 })
@@ -57,6 +57,28 @@ describe('parseWenV', () => {
     const meldingen = controleerAansluiting(kopie)
     expect(meldingen.length).toBeGreaterThan(0)
     expect(meldingen[0]).toContain('Netto omzet')
+  })
+
+  it('parseert het nieuwe rapportageformat (duizenden, kosten negatief, labels in B/C)', () => {
+    const nieuw = parseWenV(maakWenVNieuwWorkbook())
+    expect(nieuw.periode).toBe(7)
+    expect(nieuw.jaar).toBe(2026)
+    const m = nieuw.entiteiten.MIDDEN.mtd
+    // Bedragen omgerekend naar euro's
+    expect(m.nettoOmzet.act).toBeCloseTo(1628900)
+    expect(m.nettoOmzet.dFc).toBeCloseTo(118000, 0)
+    // Kosten positief gemaakt, inclusief delta's
+    expect(m.inkoop.act).toBeCloseTo(102400)
+    expect(m.inkoop.dBud).toBeCloseTo(102400 - 85300, 0)
+    expect(m.persInhuurDirect.act).toBeCloseTo(91300)
+    // Interne verrekening: negatief in bron = kosten -> positief; credit blijft negatief
+    expect(m.persInterneVerrekeningDirect.act).toBeCloseTo(179300)
+    expect(nieuw.entiteiten.HCC.mtd.persInterneVerrekeningDirect.act).toBeCloseTo(-10000)
+    // Percentages als fractie met zelf berekende delta's
+    expect(m.brutoMargePct.act).toBeCloseTo(0.469)
+    expect(m.brutoMargePct.dBud).toBeCloseTo(0.469 - 0.508)
+    expect(m.operationeelResultaatPct.dFc).toBeCloseTo(0.302 - 0.273)
+    expect(nieuw.entiteiten.HCC.mtd.operationeelResultaat.act).toBeCloseTo(1450000)
   })
 
   it('crasht niet op een onverwacht werkboek maar geeft een duidelijke fout', () => {

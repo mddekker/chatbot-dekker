@@ -29,54 +29,64 @@ export default function UploadPage({ idx, naOpslaan }) {
   // 'deels'    = bruikbare inhoud, gaat mee als context in de AI-analyse
   //              (of cijferbestand met waarschuwingen)
   // 'geen'     = niets bruikbaars gevonden, wordt niet gebruikt
+  async function verwerkEnkel(file, herkomst = null) {
+    const item = { naam: file.name, status: 'bezig', herkomst }
+    try {
+      if (isOfficeDoc(file.name)) {
+        item.type = 'context'
+        item.resultaat = await parseContextDocument(file)
+      } else {
+        const { workbook, type } = await leesWerkboekVeilig(file)
+        if (type === 'wenv' || type === 'productiviteit') {
+          try {
+            item.type = type
+            item.resultaat =
+              type === 'wenv' ? parseWenV(workbook) : parseProductiviteit(workbook, { bestandsnaam: file.name })
+          } catch (parseFout) {
+            // Structuur wijkt af van het bekende format: dan niet weggooien,
+            // maar de inhoud als context voor de AI-analyse gebruiken.
+            item.type = 'context'
+            item.resultaat = await parseContextDocument(file)
+            item.terugval = parseFout.message
+          }
+        } else {
+          // Onbekende Excel: probeer de inhoud als context voor de analyse.
+          item.type = 'context'
+          item.resultaat = await parseContextDocument(file)
+        }
+      }
+      item.status = 'ok'
+      if (item.type === 'context') {
+        const heeftBijlagen = item.resultaat.bijlagen?.length > 0
+        if ((!item.resultaat.tekst || item.resultaat.tekst.trim().length < 80) && !heeftBijlagen) {
+          item.status = 'fout'
+          item.gebruik = 'geen'
+          item.fout = 'Te weinig leesbare inhoud gevonden; dit bestand wordt niet gebruikt.'
+        } else {
+          item.gebruik = 'deels'
+        }
+      } else {
+        item.gebruik = item.resultaat.waarschuwingen?.length ? 'deels' : 'volledig'
+      }
+    } catch (e) {
+      item.status = 'fout'
+      item.gebruik = 'geen'
+      item.fout = e.message
+    }
+    return item
+  }
+
   async function verwerk(files) {
     setOpgeslagen(null)
     setFout(null)
     const nieuwe = []
     for (const file of files) {
-      const item = { naam: file.name, status: 'bezig' }
-      try {
-        if (isOfficeDoc(file.name)) {
-          item.type = 'context'
-          item.resultaat = await parseContextDocument(file)
-        } else {
-          const { workbook, type } = await leesWerkboekVeilig(file)
-          if (type === 'wenv' || type === 'productiviteit') {
-            try {
-              item.type = type
-              item.resultaat =
-                type === 'wenv' ? parseWenV(workbook) : parseProductiviteit(workbook, { bestandsnaam: file.name })
-            } catch (parseFout) {
-              // Structuur wijkt af van het bekende format: dan niet weggooien,
-              // maar de inhoud als context voor de AI-analyse gebruiken.
-              item.type = 'context'
-              item.resultaat = await parseContextDocument(file)
-              item.terugval = parseFout.message
-            }
-          } else {
-            // Onbekende Excel: probeer de inhoud als context voor de analyse.
-            item.type = 'context'
-            item.resultaat = await parseContextDocument(file)
-          }
-        }
-        item.status = 'ok'
-        if (item.type === 'context') {
-          if (!item.resultaat.tekst || item.resultaat.tekst.trim().length < 80) {
-            item.status = 'fout'
-            item.gebruik = 'geen'
-            item.fout = 'Te weinig leesbare inhoud gevonden; dit bestand wordt niet gebruikt.'
-          } else {
-            item.gebruik = 'deels'
-          }
-        } else {
-          item.gebruik = item.resultaat.waarschuwingen?.length ? 'deels' : 'volledig'
-        }
-      } catch (e) {
-        item.status = 'fout'
-        item.gebruik = 'geen'
-        item.fout = e.message
-      }
+      const item = await verwerkEnkel(file)
       nieuwe.push(item)
+      // Bijlagen uit e-mails gaan als losse bestanden door dezelfde herkenning.
+      for (const bijlage of item.resultaat?.bijlagen || []) {
+        nieuwe.push(await verwerkEnkel(new File([bijlage.bytes], bijlage.naam), file.name))
+      }
     }
     setBestanden((huidig) => [...huidig, ...nieuwe])
   }
@@ -226,7 +236,10 @@ export default function UploadPage({ idx, naOpslaan }) {
               <span className={`gebruik-badge ${b.gebruik || 'geen'}`}>
                 {b.gebruik === 'volledig' ? '● Volledig gebruikt' : b.gebruik === 'deels' ? '◐ Deels gebruikt' : '○ Niet gebruikt'}
               </span>
-              <span className="naam">{b.naam}</span>
+              <span className="naam">
+                {b.naam}
+                {b.herkomst && <span className="herkomst"> — bijlage uit {b.herkomst}</span>}
+              </span>
               {b.status === 'ok' && b.type === 'wenv' && (
                 <>
                   <span className="badge ok">W&V → dashboard</span>

@@ -1,5 +1,9 @@
 import JSZip from 'jszip'
-import * as XLSX from 'xlsx'
+import * as XLSXImport from 'xlsx'
+
+// De CFB-lezer (voor .msg) hangt afhankelijk van de bundler aan de default- of
+// naamruimte-export; pak de variant waar hij daadwerkelijk op zit.
+const XLSX = XLSXImport.CFB ? XLSXImport : XLSXImport.default ?? XLSXImport
 import { herkenEntiteit } from './entities.js'
 import { VERBODEN_SHEETS } from './parseProductiviteit.js'
 
@@ -63,6 +67,12 @@ function leesVrijeExcel(buffer) {
   for (const naam of toegestaan) {
     const sheet = wb.Sheets[naam]
     if (!sheet || !sheet['!ref']) continue
+    // Grote datasheets (soms honderdduizenden rijen) aftoppen vóór het
+    // omzetten naar CSV; de context wordt toch tot MAX_TEKST ingekort.
+    const rng = XLSX.utils.decode_range(sheet['!ref'])
+    if (rng.e.r - rng.s.r > 300) {
+      sheet['!ref'] = XLSX.utils.encode_range({ s: rng.s, e: { r: rng.s.r + 300, c: rng.e.c } })
+    }
     const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false }).trim()
     if (csv) delen.push(`=== Sheet: ${naam} ===\n${csv}`)
     if (delen.join('\n').length > MAX_TEKST) break
@@ -70,26 +80,60 @@ function leesVrijeExcel(buffer) {
   return delen.join('\n\n')
 }
 
-// Outlook-bericht (.msg): OLE/CFB-container; onderwerp en tekstbody zitten in
-// vaste property-streams. De CFB-lezer van SheetJS kan de container openen.
+// Outlook-bericht (.msg): OLE/CFB-container; onderwerp, tekstbody en bijlagen
+// zitten in vaste property-streams. De CFB-lezer van SheetJS opent de container.
+// Bijlagen die de app kan verwerken (Excel/Word/PowerPoint) worden uitgepakt
+// en gaan als losse bestanden door de normale herkenning — ook bijlagen van
+// doorgestuurde berichten binnen de mail.
+const BIJLAGE_EXTENSIES = /\.(xlsx|xlsm|xls|docx|pptx)$/i
+
 async function leesMsg(buffer) {
   const cfb = XLSX.CFB.read(new Uint8Array(buffer), { type: 'array' })
-  const leesProp = (code) => {
-    const unicode = cfb.FileIndex.find((f) => f.name === `__substg1.0_${code}001F`)
-    if (unicode?.content?.length) return new TextDecoder('utf-16le').decode(new Uint8Array(unicode.content))
-    const ansi = cfb.FileIndex.find((f) => f.name === `__substg1.0_${code}001E`)
-    if (ansi?.content?.length) return new TextDecoder('latin1').decode(new Uint8Array(ansi.content))
-    return null
+
+  const leesTekstStream = (idx) => {
+    const entry = cfb.FileIndex[idx]
+    if (!entry?.content?.length) return null
+    const bytes = new Uint8Array(entry.content)
+    return entry.name.endsWith('001F')
+      ? new TextDecoder('utf-16le').decode(bytes)
+      : new TextDecoder('latin1').decode(bytes)
   }
-  const onderwerp = leesProp('0037')
-  const body = leesProp('1000')
-  if (!body && !onderwerp) {
+  const vindProp = (code) =>
+    cfb.FileIndex.findIndex((f, i) => {
+      // Alleen op het hoofdniveau van het bericht, niet in bijlagen.
+      const pad = cfb.FullPaths[i] || ''
+      return (f.name === `__substg1.0_${code}001F` || f.name === `__substg1.0_${code}001E`) && !pad.includes('__attach')
+    })
+
+  const onderwerpIdx = vindProp('0037')
+  const bodyIdx = vindProp('1000')
+  const onderwerp = onderwerpIdx >= 0 ? leesTekstStream(onderwerpIdx) : null
+  const body = bodyIdx >= 0 ? leesTekstStream(bodyIdx) : null
+
+  // Bijlagen: datastream 37010102, bestandsnaam 3707001F (of 3704001F) in
+  // dezelfde map. Geneste mappen (doorgestuurde mails) doen automatisch mee.
+  const bijlagen = []
+  cfb.FullPaths.forEach((pad, i) => {
+    if (!pad.endsWith('__substg1.0_37010102')) return
+    const map = pad.slice(0, pad.lastIndexOf('/'))
+    // Lange bestandsnaam (3707) heeft voorrang op de verkorte DOS-naam (3704).
+    let naamIdx = cfb.FullPaths.findIndex((p) => p === `${map}/__substg1.0_3707001F`)
+    if (naamIdx < 0) naamIdx = cfb.FullPaths.findIndex((p) => p === `${map}/__substg1.0_3704001F`)
+    const naam = naamIdx >= 0 ? leesTekstStream(naamIdx) : null
+    const data = cfb.FileIndex[i]?.content
+    if (naam && data?.length && BIJLAGE_EXTENSIES.test(naam)) {
+      bijlagen.push({ naam: naam.replace(/\0/g, ''), bytes: new Uint8Array(data) })
+    }
+  })
+
+  if (!body && !onderwerp && !bijlagen.length) {
     throw new Error(
-      'Geen leesbare tekst gevonden in dit Outlook-bericht (waarschijnlijk alleen opgemaakte HTML/RTF-inhoud). ' +
-      'Kopieer de tekst naar Word (.docx) of sla de bijlage los op en upload die.'
+      'Geen leesbare tekst of bruikbare bijlagen gevonden in dit Outlook-bericht. ' +
+      'Kopieer de tekst naar Word (.docx) of sla de bijlagen los op en upload die.'
     )
   }
-  return [onderwerp ? `Onderwerp: ${onderwerp}` : null, body].filter(Boolean).join('\n\n')
+  const tekst = [onderwerp ? `Onderwerp: ${onderwerp}` : null, body].filter(Boolean).join('\n\n')
+  return { tekst, bijlagen }
 }
 
 // E-mail in .eml-formaat (platte MIME-tekst).
@@ -125,6 +169,7 @@ export async function parseContextDocument(file) {
 
   let soort
   let tekst
+  let bijlagen = []
   if (naam.endsWith('.docx')) {
     soort = 'word'
     tekst = await leesDocx(buffer)
@@ -133,7 +178,9 @@ export async function parseContextDocument(file) {
     tekst = await leesPptx(buffer)
   } else if (naam.endsWith('.msg')) {
     soort = 'e-mail'
-    tekst = await leesMsg(buffer)
+    const msg = await leesMsg(buffer)
+    tekst = msg.tekst
+    bijlagen = msg.bijlagen
   } else if (naam.endsWith('.eml')) {
     soort = 'e-mail'
     tekst = leesEml(buffer)
@@ -150,16 +197,17 @@ export async function parseContextDocument(file) {
     )
   }
 
-  if (!tekst || !tekst.trim()) {
+  if ((!tekst || !tekst.trim()) && !bijlagen.length) {
     throw new Error('Geen leesbare tekst gevonden in dit bestand.')
   }
 
-  const afgekapt = tekst.length > MAX_TEKST
+  const afgekapt = (tekst || '').length > MAX_TEKST
   return {
     soort,
-    tekst: afgekapt ? tekst.slice(0, MAX_TEKST) : tekst,
+    tekst: afgekapt ? tekst.slice(0, MAX_TEKST) : tekst || '',
     entiteit: herkenEntiteit(file.name),
     afgekapt,
+    bijlagen,
   }
 }
 

@@ -43,6 +43,9 @@ export function herkenEntiteit(str) {
   for (const kandidaat of ['MIDDEN', 'WEST', 'ZUID', 'STAF']) {
     if (s.includes(kandidaat)) return kandidaat
   }
+  // Als laatste: 'HCC' zonder regionaam duidt op het totaal (bv. kolomkop 'HCC'
+  // of een HCC-breed document); regionamen zijn hierboven al afgevangen.
+  if (s.includes('HCC')) return HCC
   return null
 }
 

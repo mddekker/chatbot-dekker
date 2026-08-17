@@ -100,6 +100,31 @@ describe('parseContextDocument', () => {
     expect(res.tekst).toContain('doorgeschoven trajecten')
   })
 
+  it('pakt Office-bijlagen uit een .msg uit, met de volledige bestandsnaam', async () => {
+    const utf16 = (s) => {
+      const bytes = new Uint8Array(s.length * 2)
+      for (let i = 0; i < s.length; i++) {
+        const code = s.charCodeAt(i)
+        bytes[i * 2] = code & 0xff
+        bytes[i * 2 + 1] = code >> 8
+      }
+      return bytes
+    }
+    const cfb = XLSX.CFB.utils.cfb_new()
+    XLSX.CFB.utils.cfb_add(cfb, '/__substg1.0_1000001F', utf16('Zie bijgaand de cijfers van P7, met vriendelijke groet.'))
+    XLSX.CFB.utils.cfb_add(cfb, '/__attach_version1.0_#00000000/__substg1.0_3704001F', utf16('HCCCij~1.xls'))
+    XLSX.CFB.utils.cfb_add(cfb, '/__attach_version1.0_#00000000/__substg1.0_3707001F', utf16('HCC Cijfers P7-2026.xlsx'))
+    XLSX.CFB.utils.cfb_add(cfb, '/__attach_version1.0_#00000000/__substg1.0_37010102', new Uint8Array([1, 2, 3, 4]))
+    XLSX.CFB.utils.cfb_add(cfb, '/__attach_version1.0_#00000001/__substg1.0_3707001F', utf16('logo.png'))
+    XLSX.CFB.utils.cfb_add(cfb, '/__attach_version1.0_#00000001/__substg1.0_37010102', new Uint8Array([9, 9]))
+    const buffer = XLSX.CFB.write(cfb, { type: 'array' })
+    const res = await parseContextDocument(new File([new Uint8Array(buffer)], 'cijfermail.msg'))
+    expect(res.bijlagen).toHaveLength(1) // afbeeldingen worden overgeslagen
+    expect(res.bijlagen[0].naam).toBe('HCC Cijfers P7-2026.xlsx') // lange naam, niet HCCCij~1
+    expect([...res.bijlagen[0].bytes]).toEqual([1, 2, 3, 4])
+    expect(res.tekst).toContain('cijfers van P7')
+  })
+
   it('leest een .eml-bestand met onderwerp en tekstdeel', async () => {
     const eml =
       'From: a@b.nl\r\nSubject: Maandcijfers juli\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n' +

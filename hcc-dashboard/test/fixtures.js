@@ -86,6 +86,41 @@ export function maakWenVWorkbook({ periode = 6 } = {}) {
   return wb
 }
 
+// Nieuw rapportageformat (zoals 'HCC Cijfers P7-2026.xlsx'): bedragen in
+// duizenden, kosten negatief, labels in kolom B/C, percentages onder de marge.
+export function maakWenVNieuwWorkbook() {
+  const aoa = []
+  aoa.push([])
+  aoa.push([null, 'Actuals-Jul-2026'])
+  for (let i = 0; i < 3; i++) aoa.push([])
+  aoa.push([null, null, null, 'Midden', null, null, null, null, 'HCC']) // rij 6
+  aoa.push([null, '(x € 1.000)', null, 'Actuals', 'Budget', '∆', 'Forecast', '∆', 'Actuals', 'Budget', '∆', 'Forecast', '∆'])
+  aoa.push([])
+  aoa.push([])
+  const rij = (b, c, act, bud, fc, act2, bud2, fc2) => [
+    null, b, c, act, bud, act - bud, fc, act - fc, act2, bud2, act2 - bud2, fc2, act2 - fc2,
+  ]
+  aoa.push(rij('Preventie', 'Omzet preventie', 188.3, 198.4, 213.6, 500, 520, 510))
+  aoa.push(rij('Verzuimbegeleiding', 'Omzet verzuimbegeleiding', 1059.7, 1032.0, 954.9, 4000, 4100, 4050))
+  aoa.push(rij('Arbeidsinterventie & Reintegratie', 'Omzet arbeidsinterventie & re-integratie', 382.6, 336.1, 340.4, 1200, 1150, 1180))
+  aoa.push(rij('Overigen', 'Omzet overige', -1.7, 2.0, 2.0, 5, 5, 5))
+  aoa.push(rij('Totale omzet', null, 1628.9, 1568.5, 1510.9, 5705, 5775, 5745))
+  aoa.push([])
+  aoa.push(rij('Inkoopkosten', 'Inkoop', -102.4, -85.3, -71.0, -300, -280, -290))
+  aoa.push([])
+  aoa.push(rij('Personeel - direct - inhuur', 'Personeel - inhuur - DIRECT', -91.3, -34.4, -62.2, -150, -100, -120))
+  aoa.push(rij('Personeel - direct - interne verrekening', 'Personeel - interne verrekening - DIRECT', -179.3, -150.9, -155, 10, 0, 5))
+  aoa.push(rij('Totale personeelskn direct', null, -762.3, -686.5, -760.4, -2500, -2450, -2480))
+  aoa.push([])
+  aoa.push(rij('Bruto marge', null, 764.3, 796.7, 679.5, 2905, 3045, 2975))
+  aoa.push([null, null, null, 0.469, 0.508, null, 0.45, null, 0.509, 0.527, null, 0.518, null])
+  aoa.push(rij('Operationeel resultaat', null, 492.0, 541.5, 412.7, 1450, 1500, 1480))
+  aoa.push([null, null, null, 0.302, 0.345, null, 0.273, null, 0.254, 0.26, null, 0.258, null])
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'HCC P7 MTD')
+  return wb
+}
+
 export function maakProductiviteitWorkbook({ regio = 'Zuid West', actueleMaanden = 6 } = {}) {
   const aoa = []
   for (let i = 0; i < 41; i++) aoa.push([null])

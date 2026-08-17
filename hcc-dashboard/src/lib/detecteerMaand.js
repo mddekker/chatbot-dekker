@@ -45,12 +45,13 @@ export function slimJaar(maandNummer, vandaag = new Date()) {
 // Prioriteit: W&V-periode > productiviteit > context-documenten >
 // nieuwste maand in de database > vorige kalendermaand.
 export function bepaalRapportagemaand({ wenv = [], prod = [], context = [], bestaandeMaanden = [], vandaag = new Date() }) {
-  // 1. W&V: het periodenummer is hard; jaar uit een productiviteitsbestand
-  //    in dezelfde batch, anders de slimme jaarregel.
+  // 1. W&V: het periodenummer is hard; jaar uit de W&V zelf (nieuw format)
+  //    of uit een productiviteitsbestand, anders de slimme jaarregel.
   const periode = wenv.map((b) => b.periode).find(Boolean)
+  const wenvJaar = wenv.map((b) => b.jaar).find(Boolean)
   const prodJaar = prod.map((b) => b.jaar).find(Boolean)
   if (periode) {
-    return { maand: periode, jaar: prodJaar ?? slimJaar(periode, vandaag), bron: `W&V-rekening (P${periode})` }
+    return { maand: periode, jaar: wenvJaar ?? prodJaar ?? slimJaar(periode, vandaag), bron: `W&V-rekening (P${periode})` }
   }
 
   // 2. Productiviteit: laatste maand met echte actuals.
