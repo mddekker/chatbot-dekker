@@ -78,6 +78,38 @@ describe('parseContextDocument', () => {
     const file = new File([new ArrayBuffer(10)], 'oud rapport.doc')
     await expect(parseContextDocument(file)).rejects.toThrow(/\.docx/)
   })
+
+  it('leest onderwerp en tekst uit een Outlook-bericht (.msg)', async () => {
+    const utf16 = (s) => {
+      const bytes = new Uint8Array(s.length * 2)
+      for (let i = 0; i < s.length; i++) {
+        const code = s.charCodeAt(i)
+        bytes[i * 2] = code & 0xff
+        bytes[i * 2 + 1] = code >> 8
+      }
+      return bytes
+    }
+    const cfb = XLSX.CFB.utils.cfb_new()
+    XLSX.CFB.utils.cfb_add(cfb, '/__substg1.0_0037001F', utf16('Cijfers P7'))
+    XLSX.CFB.utils.cfb_add(cfb, '/__substg1.0_1000001F', utf16('Beste allen, de omzet van juli valt tegen door twee doorgeschoven trajecten.'))
+    const buffer = XLSX.CFB.write(cfb, { type: 'array' })
+    const file = new File([new Uint8Array(buffer)], 'HCC _ Cijfers P7-2026.msg')
+    const res = await parseContextDocument(file)
+    expect(res.soort).toBe('e-mail')
+    expect(res.tekst).toContain('Onderwerp: Cijfers P7')
+    expect(res.tekst).toContain('doorgeschoven trajecten')
+  })
+
+  it('leest een .eml-bestand met onderwerp en tekstdeel', async () => {
+    const eml =
+      'From: a@b.nl\r\nSubject: Maandcijfers juli\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n' +
+      'Zie bijgaand de cijfers.\r\nHet verzuim in Zuid vraagt aandacht.\r\n'
+    const file = new File([new TextEncoder().encode(eml)], 'cijfers.eml')
+    const res = await parseContextDocument(file)
+    expect(res.soort).toBe('e-mail')
+    expect(res.tekst).toContain('Onderwerp: Maandcijfers juli')
+    expect(res.tekst).toContain('verzuim in Zuid')
+  })
 })
 
 describe('detecteerType', () => {

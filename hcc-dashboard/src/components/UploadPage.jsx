@@ -10,7 +10,7 @@ import { REGIOS, HCC, entiteitLabel, maandIso, maandLabel } from '../lib/entitie
 
 const MAAND_OPTIES = Array.from({ length: 12 }, (_, i) => i + 1)
 
-const isOfficeDoc = (naam) => /\.(docx|pptx|doc|ppt)$/i.test(naam)
+const isOfficeDoc = (naam) => /\.(docx|pptx|doc|ppt|msg|eml)$/i.test(naam)
 
 export default function UploadPage({ idx, naOpslaan }) {
   const [bestanden, setBestanden] = useState([]) // {naam, status, type, resultaat, fout}
@@ -41,12 +41,18 @@ export default function UploadPage({ idx, naOpslaan }) {
           item.resultaat = await parseContextDocument(file)
         } else {
           const { workbook, type } = await leesWerkboekVeilig(file)
-          if (type === 'wenv') {
-            item.type = 'wenv'
-            item.resultaat = parseWenV(workbook)
-          } else if (type === 'productiviteit') {
-            item.type = 'productiviteit'
-            item.resultaat = parseProductiviteit(workbook, { bestandsnaam: file.name })
+          if (type === 'wenv' || type === 'productiviteit') {
+            try {
+              item.type = type
+              item.resultaat =
+                type === 'wenv' ? parseWenV(workbook) : parseProductiviteit(workbook, { bestandsnaam: file.name })
+            } catch (parseFout) {
+              // Structuur wijkt af van het bekende format: dan niet weggooien,
+              // maar de inhoud als context voor de AI-analyse gebruiken.
+              item.type = 'context'
+              item.resultaat = await parseContextDocument(file)
+              item.terugval = parseFout.message
+            }
           } else {
             // Onbekende Excel: probeer de inhoud als context voor de analyse.
             item.type = 'context'
@@ -185,9 +191,10 @@ export default function UploadPage({ idx, naOpslaan }) {
       <h2>Bestanden uploaden</h2>
       <p style={{ color: 'var(--ink-2)', maxWidth: 680 }}>
         Sleep hier álles van de maand naartoe: de W&V-rekening, de zeven productiviteitsbestanden
-        én eventuele rapportages (Word, PowerPoint of Excel). De app herkent zelf wat het is en
-        zet elk bestand op de juiste plek. Ruwe bestanden worden niet opgeslagen; de sheet
-        'Personeel' wordt nooit gelezen.
+        én eventuele rapportages of e-mails (Word, PowerPoint, Excel, Outlook). De app herkent
+        zelf wat het is en zet elk bestand op de juiste plek; wat niet als cijferstructuur wordt
+        herkend gaat automatisch als context mee in de AI-analyse. Ruwe bestanden worden niet
+        opgeslagen; de sheet 'Personeel' wordt nooit gelezen.
       </p>
 
       <div
@@ -201,12 +208,12 @@ export default function UploadPage({ idx, naOpslaan }) {
       >
         <div className="dropzone-icoon">⇪</div>
         <b>Sleep bestanden hierheen</b> of klik om te bladeren
-        <div className="dropzone-sub">Excel (.xlsx) · Word (.docx) · PowerPoint (.pptx)</div>
+        <div className="dropzone-sub">Excel (.xlsx) · Word (.docx) · PowerPoint (.pptx) · E-mail (.msg/.eml)</div>
         <input
           ref={inputRef}
           type="file"
           multiple
-          accept=".xlsx,.xls,.xlsm,.docx,.pptx"
+          accept=".xlsx,.xls,.xlsm,.docx,.pptx,.msg,.eml"
           hidden
           onChange={(e) => { verwerk([...e.target.files]); e.target.value = '' }}
         />
@@ -237,6 +244,9 @@ export default function UploadPage({ idx, naOpslaan }) {
               {b.status === 'ok' && b.type === 'context' && (
                 <>
                   <span className="badge context">{b.resultaat.soort} → AI-analyse</span>
+                  {b.terugval && (
+                    <span className="badge fout" title={b.terugval}>cijferstructuur niet herkend, alleen als context gebruikt</span>
+                  )}
                   <span className="badge">{b.resultaat.entiteit ? entiteitLabel(b.resultaat.entiteit) : 'HCC-breed'}</span>
                   {b.resultaat.afgekapt && <span className="badge">ingekort</span>}
                 </>

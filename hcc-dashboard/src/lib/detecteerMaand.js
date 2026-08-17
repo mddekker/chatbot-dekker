@@ -20,6 +20,16 @@ export function maandUitTekst(tekst) {
       return { maand: i + 1, jaar: jaarM ? parseInt(jaarM[1], 10) : null }
     }
   }
+
+  // Periodenotatie: 'P7' of 'periode 7', eventueel met jaartal elders.
+  m = s.match(/\bp(?:eriode)?\s*(\d{1,2})\b/)
+  if (m) {
+    const maand = parseInt(m[1], 10)
+    if (maand >= 1 && maand <= 12) {
+      const jaarM = s.match(/\b(20\d{2})\b/)
+      return { maand, jaar: jaarM ? parseInt(jaarM[1], 10) : null }
+    }
+  }
   return null
 }
 
