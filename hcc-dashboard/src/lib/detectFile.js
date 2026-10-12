@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import { isProductiviteitSheetNaam, VERBODEN_SHEETS } from './parseProductiviteit.js'
+import { isForecastWerkboek } from './parseForecast.js'
 
 // Herkent het bestandstype op één uploadplek:
 // - Excel met MTD/YTD-sheets            -> 'wenv'
@@ -12,6 +13,7 @@ export function detecteerType(bestandsnaam, sheetNamen = null) {
   }
   if (sheetNamen) {
     if (sheetNamen.some(isProductiviteitSheetNaam)) return 'productiviteit'
+    if (isForecastWerkboek(sheetNamen)) return 'forecast'
     if (sheetNamen.some((n) => /MTD|YTD/i.test(n))) return 'wenv'
     return 'context'
   }

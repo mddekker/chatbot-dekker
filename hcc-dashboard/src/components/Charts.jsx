@@ -47,8 +47,9 @@ function Kaart({ titel, sub, children, hoogte = 240 }) {
   )
 }
 
-// Omzet of OR: ACT vs BUD vs FC.
-export function ActBudFcChart({ data, veldPrefix, titel }) {
+// Omzet of OR: ACT vs BUD vs FC, optioneel met prognoselijn uit het
+// forecastbestand doorgetrokken tot december (prognoseVersie, bv. 'FC3').
+export function ActBudFcChart({ data, veldPrefix, titel, prognoseVersie = null }) {
   return (
     <Kaart titel={titel}>
       <LineChart data={data} margin={{ top: 6, right: 12, left: 4, bottom: 0 }}>
@@ -60,6 +61,17 @@ export function ActBudFcChart({ data, veldPrefix, titel }) {
         <Line isAnimationActive={false} name="Budget" dataKey={`${veldPrefix}Bud`} stroke={KLEUR.bud} strokeWidth={1.6} strokeDasharray="5 4" dot={false} />
         <Line isAnimationActive={false} name="Forecast" dataKey={`${veldPrefix}Fc`} stroke={KLEUR.fc} strokeWidth={1.6} strokeDasharray="2 3" dot={false} />
         <Line isAnimationActive={false} name="Actueel" dataKey={`${veldPrefix}Act`} stroke={KLEUR.act} strokeWidth={2.2} dot={{ r: 2.5 }} />
+        {prognoseVersie && (
+          <Line
+            isAnimationActive={false}
+            name={`Prognose ${prognoseVersie}`}
+            dataKey={`${veldPrefix}Prognose`}
+            stroke={KLEUR.interventie}
+            strokeWidth={2.2}
+            strokeDasharray="6 4"
+            dot={{ r: 2.5, fill: 'var(--surface-1)', strokeWidth: 1.6 }}
+          />
+        )}
       </LineChart>
     </Kaart>
   )

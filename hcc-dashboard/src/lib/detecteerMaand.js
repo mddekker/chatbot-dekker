@@ -44,7 +44,7 @@ export function slimJaar(maandNummer, vandaag = new Date()) {
 // Bepaal de rapportagemaand voor een batch geüploade bestanden.
 // Prioriteit: W&V-periode > productiviteit > context-documenten >
 // nieuwste maand in de database > vorige kalendermaand.
-export function bepaalRapportagemaand({ wenv = [], prod = [], context = [], bestaandeMaanden = [], vandaag = new Date() }) {
+export function bepaalRapportagemaand({ wenv = [], prod = [], forecast = [], context = [], bestaandeMaanden = [], vandaag = new Date() }) {
   // 1. W&V: het periodenummer is hard; jaar uit de W&V zelf (nieuw format)
   //    of uit een productiviteitsbestand, anders de slimme jaarregel.
   const periode = wenv.map((b) => b.periode).find(Boolean)
@@ -64,7 +64,17 @@ export function bepaalRapportagemaand({ wenv = [], prod = [], context = [], best
     }
   }
 
-  // 3. Contextdocumenten: maand uit bestandsnaam of begin van de tekst.
+  // 3. Forecastbestand: de rapportagemaand is de laatste gerealiseerde maand
+  //    (de maand vóór de eerste prognosemaand).
+  const fc = forecast.find((b) => b.eersteForecastMaand)
+  if (fc) {
+    const laatsteRealisatie = fc.eersteForecastMaand - 1
+    if (laatsteRealisatie >= 1) {
+      return { maand: laatsteRealisatie, jaar: fc.jaar ?? slimJaar(laatsteRealisatie, vandaag), bron: `forecastbestand (${fc.versie})` }
+    }
+  }
+
+  // 4. Contextdocumenten: maand uit bestandsnaam of begin van de tekst.
   for (const doc of context) {
     const uitNaam = maandUitTekst(doc.bestandsnaam) || maandUitTekst((doc.tekst || '').slice(0, 3000))
     if (uitNaam?.maand) {

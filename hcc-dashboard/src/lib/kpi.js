@@ -1,4 +1,4 @@
-import { HCC, REGIOS } from './entities.js'
+import { HCC, REGIOS, maandIso } from './entities.js'
 
 // Bouw uit de platte snapshotlijst een index:
 // { wenv: { ENT: { '2026-06-01': {mtd,ytd} } },
@@ -6,18 +6,48 @@ import { HCC, REGIOS } from './entities.js'
 //   context: { ENT: { '2026-06-01': { docs: [...] } } },
 //   maanden: ['2026-01-01', ...] } (gesorteerd, unie van de cijferbronnen)
 export function indexeerSnapshots(rijen) {
-  const idx = { wenv: {}, prod: {}, context: {}, maanden: [] }
+  const idx = { wenv: {}, prod: {}, context: {}, forecast: {}, maanden: [] }
   const maanden = new Set()
   for (const rij of rijen || []) {
     const maand = String(rij.maand).slice(0, 10)
-    const doel = rij.bron === 'wenv' ? idx.wenv : rij.bron === 'productiviteit' ? idx.prod : idx.context
-    // Contextdocumenten sturen de maandkiezer niet; alleen cijfers tellen mee.
-    if (rij.bron !== 'context') maanden.add(maand)
+    const doel =
+      rij.bron === 'wenv' ? idx.wenv
+        : rij.bron === 'productiviteit' ? idx.prod
+        : rij.bron === 'forecast' ? idx.forecast
+        : idx.context
+    // Context en forecast sturen de maandkiezer niet; alleen echte cijfers.
+    if (rij.bron === 'wenv' || rij.bron === 'productiviteit') maanden.add(maand)
     doel[rij.entiteit] = doel[rij.entiteit] || {}
     doel[rij.entiteit][maand] = rij.data
   }
   idx.maanden = [...maanden].sort()
   return idx
+}
+
+// Nieuwste forecastversie voor een entiteit (hoogste opslagmaand).
+export function nieuwsteForecast(idx, ent) {
+  const perMaand = idx.forecast[ent]
+  if (!perMaand) return null
+  const sleutels = Object.keys(perMaand).sort()
+  return sleutels.length ? perMaand[sleutels[sleutels.length - 1]] : null
+}
+
+// Jaarprojectie volgens de nieuwste forecast, met delta t.o.v. jaarbudget.
+export function jaarProjectie(idx, ent) {
+  const fc = nieuwsteForecast(idx, ent)
+  if (!fc?.jaarTotaal) return null
+  const delta = (veld) =>
+    fc.jaarTotaal[veld] != null && fc.budgetJaar?.[veld] != null
+      ? fc.jaarTotaal[veld] - fc.budgetJaar[veld]
+      : null
+  return {
+    versie: fc.versie,
+    jaar: fc.jaar,
+    omzet: fc.jaarTotaal.nettoOmzet ?? null,
+    omzetDBud: delta('nettoOmzet'),
+    or: fc.jaarTotaal.operationeelResultaat ?? null,
+    orDBud: delta('operationeelResultaat'),
+  }
 }
 
 // Alle contextdocumenten van een maand, over alle entiteiten heen.
@@ -119,7 +149,7 @@ export function kpiTegels(idx, ent, maand) {
     sparkline: laatste12.map((m) => ({ maand: m, waarde: prodWaarde(idx, ent, m, veld) })),
   })
 
-  return [
+  const tegels = [
     bedragTegel('omzet', 'Netto omzet', 'nettoOmzet'),
     bedragTegel('or', 'Operationeel resultaat', 'operationeelResultaat'),
     pctTegel('orPct', 'OR %', 'operationeelResultaatPct'),
@@ -130,6 +160,51 @@ export function kpiTegels(idx, ent, maand) {
     somTegel('inhuur', 'Inhuurkosten', ['persInhuurDirect', 'persInhuurIndirect']),
     somTegel('ikv', 'Interne verrekening saldo', ['persInterneVerrekeningDirect', 'persInterneVerrekeningIndirect']),
   ]
+
+  // Jaarprojectie volgens de nieuwste forecast, met delta t.o.v. jaarbudget.
+  const projectie = jaarProjectie(idx, ent)
+  if (projectie?.omzet != null || projectie?.or != null) {
+    tegels.push(
+      {
+        id: 'jaarOmzet', titel: `Jaaromzet ${projectie.jaar} (${projectie.versie})`, soort: 'bedrag',
+        waarde: projectie.omzet, dBud: projectie.omzetDBud, dFc: null, sparkline: [],
+      },
+      {
+        id: 'jaarOr', titel: `Jaar-OR ${projectie.jaar} (${projectie.versie})`, soort: 'bedrag',
+        waarde: projectie.or, dBud: projectie.orDBud, dFc: null, sparkline: [],
+      },
+    )
+  }
+  return tegels
+}
+
+// Trendreeks aangevuld met de prognosemaanden uit de nieuwste forecast:
+// omzet en OR lopen dan gestippeld door tot december. Het verbindingspunt op
+// de geselecteerde maand krijgt de actuele waarde zodat de lijn aansluit.
+export function trendMetPrognose(idx, ent, maand) {
+  const reeks = trendReeksen(idx, ent, maand).map((p) => ({ ...p }))
+  const fc = nieuwsteForecast(idx, ent)
+  const [selJaar, selMaand] = String(maand).split('-').map((v) => parseInt(v, 10))
+  if (!fc?.maanden || fc.jaar !== selJaar) return { reeks, versie: null }
+
+  const laatste = reeks[reeks.length - 1]
+  let toegevoegd = false
+  for (let m = selMaand + 1; m <= 12; m++) {
+    const fm = fc.maanden[m]
+    if (!fm || (fm.nettoOmzet == null && fm.operationeelResultaat == null)) continue
+    reeks.push({
+      maand: maandIso(fc.jaar, m),
+      omzetPrognose: fm.nettoOmzet ?? null,
+      orPrognose: fm.operationeelResultaat ?? null,
+    })
+    toegevoegd = true
+  }
+  if (!toegevoegd) return { reeks, versie: null }
+  if (laatste) {
+    laatste.omzetPrognose = laatste.omzetAct
+    laatste.orPrognose = laatste.orAct
+  }
+  return { reeks, versie: fc.versie }
 }
 
 // Trendreeksen (max 12 maanden t/m de geselecteerde maand).
