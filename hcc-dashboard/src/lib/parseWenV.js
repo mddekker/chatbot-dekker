@@ -239,12 +239,19 @@ function parseSheetNieuw(sheet) {
   }
 
   let gevonden = 0
+  // Labels staan in de kolommen vóór het eerste entiteitsblok; de exacte
+  // kolom verschilt per variant van het format, dus we zoeken ze daar op.
+  const eersteBlokKolom = Math.min(...blokken.map((b) => b.kolom))
   for (let r = rng.s.r; r <= rng.e.r; r++) {
-    // Detailregels hebben het label in kolom C, totaalregels in kolom B.
-    const labelC = celWaarde(sheet, r, 2)
-    const labelB = celWaarde(sheet, r, 1)
-    const label = typeof labelC === 'string' ? labelC.trim() : typeof labelB === 'string' ? labelB.trim() : null
-    if (!label || !NIEUW_LABELS[label]) continue
+    let label = null
+    for (let c = rng.s.c; c < eersteBlokKolom; c++) {
+      const v = celWaarde(sheet, r, c)
+      if (typeof v === 'string' && NIEUW_LABELS[v.trim()]) {
+        label = v.trim()
+        break
+      }
+    }
+    if (!label) continue
     const [veld, kosten] = NIEUW_LABELS[label]
     for (const { entiteit, kolom } of blokken) {
       if (perEntiteit[entiteit][veld] !== undefined) continue

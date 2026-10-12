@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import * as XLSX from 'xlsx'
 import { parseWenV, controleerAansluiting } from '../src/lib/parseWenV.js'
-import { maakWenVWorkbook, maakWenVNieuwWorkbook } from './fixtures.js'
+import { maakWenVWorkbook, maakWenVNieuwWorkbook, maakWenVSeptWorkbook } from './fixtures.js'
 
 describe('parseWenV', () => {
   const wb = maakWenVWorkbook({ periode: 6 })
@@ -79,6 +79,19 @@ describe('parseWenV', () => {
     expect(m.brutoMargePct.dBud).toBeCloseTo(0.469 - 0.508)
     expect(m.operationeelResultaatPct.dFc).toBeCloseTo(0.302 - 0.273)
     expect(nieuw.entiteiten.HCC.mtd.operationeelResultaat.act).toBeCloseTo(1450000)
+  })
+
+  it("parseert de septembervariant: sheet 'Blad1', labels in kolom A/B, blokken vanaf C", () => {
+    const res = parseWenV(maakWenVSeptWorkbook())
+    expect(res.periode).toBe(9)
+    expect(res.jaar).toBe(2026)
+    const m = res.entiteiten.MIDDEN.mtd
+    expect(m.omzetPreventie.act).toBeCloseTo(158000)
+    expect(m.nettoOmzet.act).toBeCloseTo(1560000)
+    expect(m.nettoOmzet.dFc).toBeCloseTo(-130000)
+    expect(m.inkoop.act).toBeCloseTo(119000) // kosten positief gemaakt
+    expect(m.operationeelResultaatPct.act).toBeCloseTo(0.19)
+    expect(res.entiteiten.HCC.mtd.operationeelResultaat.act).toBeCloseTo(1200000)
   })
 
   it('crasht niet op een onverwacht werkboek maar geeft een duidelijke fout', () => {
