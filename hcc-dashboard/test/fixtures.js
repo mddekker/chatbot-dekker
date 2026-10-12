@@ -143,6 +143,38 @@ export function maakWenVSeptWorkbook() {
   return wb
 }
 
+// Forecastbestand: per entiteit een sheet met 12 maandkolommen (Realisatie/
+// Forecast), FC-jaartotaal en budgetkolom. Inclusief een oudere FC2-sheet
+// voor HCC om de versiekeuze te testen.
+export function maakForecastWorkbook() {
+  const sheet = (versie, entCode, entNaam, eersteForecast) => {
+    const aoa = []
+    for (let i = 0; i < 5; i++) aoa.push([])
+    aoa.push([null, null, `(6.N2.${entCode}) ${entNaam}`]) // rij 6
+    for (let i = 0; i < 3; i++) aoa.push([])
+    const status = Array.from({ length: 12 }, (_, i) => (i + 1 >= eersteForecast ? 'Forecast' : 'Realisatie'))
+    aoa.push([null, versie, '(× €1.000)', null, ...status, versie, null, 'FC2', 'Delta', null, 'B2026']) // rij 10
+    aoa.push([null, '2026', null, null, 'Jan', 'Feb', 'Mrt', 'Apr', 'Mei', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec', 'Totaal', null, 'Totaal', null, null, 'Totaal'])
+    aoa.push([])
+    const rij = (label, basis) => [
+      null, null, label, null,
+      ...Array.from({ length: 12 }, (_, i) => basis + i * 1000),
+      basis * 12 + 66000, null, basis * 12, null, null, basis * 12 + 100000,
+    ]
+    aoa.push(rij('Netto omzet', 1500000))
+    aoa.push(rij('Bruto marge', 700000))
+    aoa.push(rij('Contributiemarge', 400000))
+    aoa.push(rij('Operationeel resultaat', 300000))
+    return XLSX.utils.aoa_to_sheet(aoa)
+  }
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, sheet('FC3', 'MIDDEN', 'MIDDEN', 9), 'MN')
+  XLSX.utils.book_append_sheet(wb, sheet('FC3', 'N0', 'HumanCapitalCare', 9), 'HCC')
+  XLSX.utils.book_append_sheet(wb, sheet('FC2', 'N0', 'HumanCapitalCare', 6), 'FC2')
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['toelichting']]), 'MN FC3 analyse')
+  return wb
+}
+
 export function maakProductiviteitWorkbook({ regio = 'Zuid West', actueleMaanden = 6 } = {}) {
   const aoa = []
   for (let i = 0; i < 41; i++) aoa.push([null])

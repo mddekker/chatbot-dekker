@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { leesWerkboekVeilig } from '../lib/detectFile.js'
 import { parseWenV, controleerAansluiting } from '../lib/parseWenV.js'
 import { parseProductiviteit } from '../lib/parseProductiviteit.js'
+import { parseForecast } from '../lib/parseForecast.js'
 import { parseContextDocument, CONTEXT_SUGGESTIES } from '../lib/parseContext.js'
 import { bepaalRapportagemaand } from '../lib/detecteerMaand.js'
 import { bewaarSnapshots } from '../lib/store.js'
@@ -37,11 +38,13 @@ export default function UploadPage({ idx, naOpslaan }) {
         item.resultaat = await parseContextDocument(file)
       } else {
         const { workbook, type } = await leesWerkboekVeilig(file)
-        if (type === 'wenv' || type === 'productiviteit') {
+        if (type === 'wenv' || type === 'productiviteit' || type === 'forecast') {
           try {
             item.type = type
             item.resultaat =
-              type === 'wenv' ? parseWenV(workbook) : parseProductiviteit(workbook, { bestandsnaam: file.name })
+              type === 'wenv' ? parseWenV(workbook)
+                : type === 'forecast' ? parseForecast(workbook)
+                : parseProductiviteit(workbook, { bestandsnaam: file.name })
           } catch (parseFout) {
             // Structuur wijkt af van het bekende format: dan niet weggooien,
             // maar de inhoud als context voor de AI-analyse gebruiken.
@@ -51,13 +54,18 @@ export default function UploadPage({ idx, naOpslaan }) {
           }
         } else if (type === 'onbekend-excel' && workbook) {
           // Sheetnamen zeggen niets (bv. 'Blad1'): probeer de inhoud eerst
-          // als cijferbestand; lukt dat niet, dan wordt het context.
+          // als cijferbestand of forecast; lukt dat niet, dan wordt het context.
           try {
             item.type = 'wenv'
             item.resultaat = parseWenV(workbook)
           } catch {
-            item.type = 'context'
-            item.resultaat = await parseContextDocument(file)
+            try {
+              item.type = 'forecast'
+              item.resultaat = parseForecast(workbook)
+            } catch {
+              item.type = 'context'
+              item.resultaat = await parseContextDocument(file)
+            }
           }
         } else {
           // Onbekende Excel: probeer de inhoud als context voor de analyse.
@@ -104,6 +112,7 @@ export default function UploadPage({ idx, naOpslaan }) {
   const geslaagd = bestanden.filter((b) => b.status === 'ok')
   const wenvBestanden = geslaagd.filter((b) => b.type === 'wenv')
   const prodBestanden = geslaagd.filter((b) => b.type === 'productiviteit')
+  const forecastBestanden = geslaagd.filter((b) => b.type === 'forecast')
   const contextBestanden = geslaagd.filter((b) => b.type === 'context')
 
   // De app bepaalt de rapportagemaand zelf; de gebruiker hoeft alleen nog te
@@ -113,6 +122,7 @@ export default function UploadPage({ idx, naOpslaan }) {
     const keuze = bepaalRapportagemaand({
       wenv: wenvBestanden.map((b) => b.resultaat),
       prod: prodBestanden.map((b) => b.resultaat),
+      forecast: forecastBestanden.map((b) => b.resultaat),
       context: contextBestanden.map((b) => ({ bestandsnaam: b.naam, tekst: b.resultaat.tekst })),
       bestaandeMaanden: idx.maanden,
     })
@@ -175,6 +185,19 @@ export default function UploadPage({ idx, naOpslaan }) {
           if (m > maandNr) continue
           if (data.brutoWerkbareUren == null && data.nettoProductiviteit == null) continue
           rijen.push({ maand: maandIso(jaar, m), entiteit: ent, bron: 'productiviteit', data })
+        }
+      }
+      // Forecastbestanden: één rij per entiteit per forecastversie, opgeslagen
+      // onder de eerste prognosemaand (zo blijven FC2 en FC3 naast elkaar
+      // bestaan en pakt het dashboard automatisch de nieuwste versie).
+      for (const b of forecastBestanden) {
+        const fc = b.resultaat
+        const fcMaand = maandIso(fc.jaar ?? jaar, fc.eersteForecastMaand ?? maandNr)
+        for (const [ent, data] of Object.entries(fc.entiteiten)) {
+          rijen.push({
+            maand: fcMaand, entiteit: ent, bron: 'forecast',
+            data: { versie: fc.versie, jaar: fc.jaar ?? jaar, eersteForecastMaand: fc.eersteForecastMaand, ...data },
+          })
         }
       }
       // Contextdocumenten: per entiteit één rij met een docs-array; nieuwe
@@ -264,6 +287,16 @@ export default function UploadPage({ idx, naOpslaan }) {
                   {b.resultaat.laatsteActueleMaand && <span className="badge">actueel t/m maand {b.resultaat.laatsteActueleMaand}</span>}
                 </>
               )}
+              {b.status === 'ok' && b.type === 'forecast' && (
+                <>
+                  <span className="badge ok">Forecast → dashboard</span>
+                  <span className="badge">{b.resultaat.versie}</span>
+                  {b.resultaat.eersteForecastMaand && (
+                    <span className="badge">prognose vanaf maand {b.resultaat.eersteForecastMaand}</span>
+                  )}
+                  <span className="badge">{Object.keys(b.resultaat.entiteiten).length} entiteiten</span>
+                </>
+              )}
               {b.status === 'ok' && b.type === 'context' && (
                 <>
                   <span className="badge context">{b.resultaat.soort} → AI-analyse</span>
@@ -294,6 +327,12 @@ export default function UploadPage({ idx, naOpslaan }) {
                 <span className="waarschuwing-tekst"> — ontbreekt: {validatie.ontbrekend.map(entiteitLabel).join(', ')}</span>
               )}
             </li>
+            {forecastBestanden.length > 0 && (
+              <li>
+                Forecast binnen: {forecastBestanden.map((b) => b.resultaat.versie).join(', ')} —
+                prognoselijnen en jaarprojectie worden bijgewerkt
+              </li>
+            )}
             {contextBestanden.length > 0 && (
               <li>Contextdocumenten voor de analyse: {contextBestanden.length}</li>
             )}

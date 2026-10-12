@@ -1,6 +1,6 @@
 import { supabase, demoModus, supabaseUrl, supabaseAnonKey } from './supabase.js'
 import { ALLE_ENTITEITEN, REGIOS } from './entities.js'
-import { trendReeksen, kpiTegels, contextDocs } from './kpi.js'
+import { trendReeksen, kpiTegels, contextDocs, jaarProjectie } from './kpi.js'
 import { brutalFacts } from './brutalFacts.js'
 import { reviewVragen } from './reviewVragen.js'
 
@@ -19,6 +19,7 @@ export function bouwAnalysePayload(idx, maand) {
       trend6m: trendReeksen(idx, ent, maand).slice(-6),
       bevindingen: brutalFacts(idx, ent, maand).map((b) => b.tekst),
       conceptReviewvragen: REGIOS.includes(ent) ? reviewVragen(idx, ent, maand).map((v) => v.vraag) : undefined,
+      jaarprojectie: jaarProjectie(idx, ent) ?? undefined,
     }
   }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { kpiTegels, trendReeksen, productiviteitsBrug } from '../lib/kpi.js'
+import { kpiTegels, trendReeksen, trendMetPrognose, productiviteitsBrug } from '../lib/kpi.js'
 import { REGIOS, STAF, entiteitLabel } from '../lib/entities.js'
 import KpiTiles from './KpiTiles.jsx'
 import AnalyseBlok from './AnalyseBlok.jsx'
@@ -12,6 +12,7 @@ export default function DashboardRegio({ idx, maand }) {
   const [regio, setRegio] = useState(REGIOS[0])
   const tegels = kpiTegels(idx, regio, maand)
   const trend = trendReeksen(idx, regio, maand)
+  const prognose = trendMetPrognose(idx, regio, maand)
   const brug = productiviteitsBrug(idx, regio, maand)
   const isStaf = regio === STAF
 
@@ -31,8 +32,8 @@ export default function DashboardRegio({ idx, maand }) {
 
       <h2>Trends</h2>
       <div className="grafiek-grid">
-        <ActBudFcChart data={trend} veldPrefix="omzet" titel="Omzet: ACT vs BUD vs FC" />
-        <ActBudFcChart data={trend} veldPrefix="or" titel="Operationeel resultaat: ACT vs BUD vs FC" />
+        <ActBudFcChart data={prognose.reeks} veldPrefix="omzet" titel="Omzet: ACT vs BUD vs FC" prognoseVersie={prognose.versie} />
+        <ActBudFcChart data={prognose.reeks} veldPrefix="or" titel="Operationeel resultaat: ACT vs BUD vs FC" prognoseVersie={prognose.versie} />
         {!isStaf && <ProductiviteitChart data={trend} />}
         {!isStaf && <VerzuimChart data={trend} />}
         <OmzetMixChart data={trend} />
