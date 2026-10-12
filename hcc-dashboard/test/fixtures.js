@@ -121,6 +121,28 @@ export function maakWenVNieuwWorkbook() {
   return wb
 }
 
+// Variant van het nieuwe format zoals 'Resultaten Sept 2026 Per regio.xlsx':
+// sheet heet 'Blad1' (geen MTD/YTD), labels één kolom naar links (A/B) en
+// datablokken vanaf kolom C.
+export function maakWenVSeptWorkbook() {
+  const aoa = []
+  aoa.push([null, null, null, null, 'Voorlopige cijfers:'])
+  aoa.push(['Actuals-Sept-2026'])
+  aoa.push([null, null, 'Midden', null, null, null, null, 'HCC'])
+  aoa.push(['(x € 1.000)', null, 'Actuals', 'Budget', '∆', 'Forecast', '∆', 'Actuals', 'Budget', '∆', 'Forecast', '∆'])
+  const rij = (a, b, act, bud, fc, act2, bud2, fc2) => [
+    a, b, act, bud, act - bud, fc, act - fc, act2, bud2, act2 - bud2, fc2, act2 - fc2,
+  ]
+  aoa.push(rij('Preventie', 'Omzet preventie', 158, 149, 202, 543, 626, 660))
+  aoa.push(rij('Totale omzet', null, 1560, 1562, 1690, 6855, 6741, 6831))
+  aoa.push(rij('Inkoopkosten', 'Inkoop', -119, -87, -74, -342, -295, -312))
+  aoa.push(rij('Operationeel resultaat', null, 300, 320, 310, 1200, 1250, 1230))
+  aoa.push([null, null, 0.19, 0.2, null, 0.18, null, 0.175, 0.185, null, 0.18, null])
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'Blad1')
+  return wb
+}
+
 export function maakProductiviteitWorkbook({ regio = 'Zuid West', actueleMaanden = 6 } = {}) {
   const aoa = []
   for (let i = 0; i < 41; i++) aoa.push([null])

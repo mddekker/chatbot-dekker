@@ -22,12 +22,16 @@ export function detecteerType(bestandsnaam, sheetNamen = null) {
 // 1. alleen de sheetnamen (bookSheets) om het type te bepalen;
 // 2. daarna uitsluitend de benodigde sheets. De sheet 'Personeel' met
 //    persoonsgegevens wordt zo nooit geparseerd of in het geheugen gehouden.
+// Een Excel zonder herkenbare sheetnamen krijgt type 'onbekend-excel': de
+// aanroeper probeert hem dan eerst als cijferbestand en valt terug op context.
 export async function leesWerkboekVeilig(file) {
   const buffer = await file.arrayBuffer()
   const namen = XLSX.read(buffer, { type: 'array', bookSheets: true }).SheetNames
   const type = detecteerType(file.name, namen)
 
-  if (type === 'context') return { workbook: null, type }
+  if (type === 'context' && !/\.(xlsx|xlsm|xls)$/i.test(file.name)) {
+    return { workbook: null, type }
+  }
 
   const toegestaan =
     type === 'productiviteit'
@@ -35,5 +39,5 @@ export async function leesWerkboekVeilig(file) {
       : namen.filter((n) => !VERBODEN_SHEETS.includes(n))
 
   const workbook = XLSX.read(buffer, { type: 'array', sheets: toegestaan })
-  return { workbook, type }
+  return { workbook, type: type === 'context' ? 'onbekend-excel' : type }
 }

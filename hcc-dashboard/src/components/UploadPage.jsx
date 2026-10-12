@@ -49,6 +49,16 @@ export default function UploadPage({ idx, naOpslaan }) {
             item.resultaat = await parseContextDocument(file)
             item.terugval = parseFout.message
           }
+        } else if (type === 'onbekend-excel' && workbook) {
+          // Sheetnamen zeggen niets (bv. 'Blad1'): probeer de inhoud eerst
+          // als cijferbestand; lukt dat niet, dan wordt het context.
+          try {
+            item.type = 'wenv'
+            item.resultaat = parseWenV(workbook)
+          } catch {
+            item.type = 'context'
+            item.resultaat = await parseContextDocument(file)
+          }
         } else {
           // Onbekende Excel: probeer de inhoud als context voor de analyse.
           item.type = 'context'
